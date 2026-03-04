@@ -20,3 +20,6 @@ class UE:
             point=self.latlng, distance=distance, angle=angle
         )
         self.latlng = new_point
+
+    def move_to(self, latlng: LatLng):
+        self.latlng = latlng
