@@ -1,5 +1,5 @@
-from bs import BS
-from ue import UE
+from base_tower import BaseTower
+from user_equipment import UserEquipment
 from location_utils import LocationUtils
 import numpy as np
 
@@ -20,7 +20,7 @@ class WaveUtils:
         return WaveUtils.pd0(d0=d0, f_c=f_c) + 10 * n * np.log10(distance / d0)
 
     @staticmethod
-    def calculate_rsrp(bs: BS, ue: UE):
+    def calculate_rsrp(bs: BaseTower, ue: UserEquipment):
         # RSRP (dBm) = P_tx + G_tx + G_rx - PL(d) - L_shadow (TODO: add later) - L_fast (TODO: add later)
         # PL(d) = PL(d0) + 10·n·log10(d/d0)
         # n: path loss exponent: NLOS 2.7 - 3.5, LOS 2 - 2.5

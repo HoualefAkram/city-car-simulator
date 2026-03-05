@@ -1,13 +1,17 @@
 from latlng import LatLng
 from location_utils import LocationUtils
 from typing import Optional
-from bs import BS
+from base_tower import BaseTower
 
 
-class UE:
+class UserEquipment:
 
     def __init__(
-        self, id: int, latlng: LatLng, g_rx: float, serving_bs: Optional[BS] = None
+        self,
+        id: int,
+        latlng: LatLng,
+        g_rx: float,
+        serving_bs: Optional[BaseTower] = None,
     ):
         self.id: int = id
         self.g_rx: float = g_rx  # 0 to +2 dBi

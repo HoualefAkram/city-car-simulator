@@ -1,16 +1,16 @@
-from ue import UE
+from user_equipment import UserEquipment
 from typing import Optional
 from latlng import LatLng
 from ng_ran_report import NGRANReport
 
 
-class BS:
+class BaseTower:
 
     def __init__(
         self,
         id: int,
         latlng: LatLng,
-        connected_ues: list[UE],
+        connected_ues: list[UserEquipment],
         p_tx: float,
         frequency: float,  # 4G LTE (common)2100 MHz, 4G LTE (low band)800 MHz, 5G sub-6GHz 3500 MHz, 5G mmWave 28 GHz
         g_tx: float,  # +14 to +17 dBi
@@ -18,7 +18,7 @@ class BS:
     ):
         self.id = id
         self.latlng: LatLng = latlng
-        self.connected_ues: list[UE] = connected_ues
+        self.connected_ues: list[UserEquipment] = connected_ues
         self.last_report: NGRANReport = ng_ran_report
         self.p_tx = p_tx
         self.g_tx = g_tx
