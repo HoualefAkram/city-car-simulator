@@ -16,6 +16,7 @@ class BaseTower:
         connected_ues: list[UserEquipment],
         p_tx: float,
         frequency: float,  # 4G LTE (common)2100 MHz, 4G LTE (low band)800 MHz, 5G sub-6GHz 3500 MHz, 5G mmWave 28 GHz
+        bandwidth: float,  # channel width, 20 MHz Minimum 5G deployment, 50 MHz Common 5G urban, 100 MHz Typical 5G urban, 200 MHz High-end 5G
         g_tx: float,  # +14 to +17 dBi
         ng_ran_report: Optional[NGRANReport] = None,
     ):
@@ -26,6 +27,7 @@ class BaseTower:
         self.p_tx = p_tx
         self.g_tx = g_tx
         self.frequency = frequency
+        self.bandwidth = bandwidth
 
     def __repr__(self):
         return f"BaseTower(id: {self.id}, connected_ues: {len(self.connected_ues)})"

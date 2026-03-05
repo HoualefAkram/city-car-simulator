@@ -40,3 +40,24 @@ class WaveUtils:
 
         rsrp = p_tx + g_tx + g_rx - pl
         return rsrp
+
+    @staticmethod
+    def calculate_rssi(
+        all_rsrp_dBm: list[float],
+        bandwidth_hz: float,
+        noise_figure_db: float = 7.0,  # In a perfect world, the UE antenna would receive signals with zero added noise. In reality, the **UE's hardware (amplifiers, circuits) adds some noise** on top of what it receives. `noise_figure_db` measures how much extra noise the hardware adds.
+    ) -> float:
+        # Thermal noise floor
+        noise_dBm = -174 + 10 * np.log10(bandwidth_hz) + noise_figure_db
+        # Convert all signals + noise to linear and sum
+        total_linear = sum(10 ** (rsrp / 10) for rsrp in all_rsrp_dBm)
+        total_linear += 10 ** (noise_dBm / 10)
+
+        return 10 * np.log10(total_linear)
+
+    @staticmethod
+    def calculate_rsrq(rsrp: float, n: int, rssi: float):
+        # RSSI in dBm
+        # convert to linear then sum: total = 10^(RSRP_bs1/10) + 10^(RSRP_bs2/10) + 10^(noise/10)
+        # convert back to dBm: RSSI  = 10·log10(total)
+        return 10 * np.log10(n) + rsrp - rssi

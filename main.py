@@ -10,6 +10,7 @@ bs1 = BaseTower(
     connected_ues=[],
     p_tx=43.0,  # typical 5G macro BS transmit power (dBm)
     frequency=3.5e9,  # 3500 MHz, standard 5G sub-6GHz band
+    bandwidth=100e6,  # 100 MHz,  typical 5G urban deployment
     g_tx=15.0,  # typical macro sector antenna gain (dBi)
 )
 
