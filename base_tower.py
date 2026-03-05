@@ -1,7 +1,10 @@
-from user_equipment import UserEquipment
-from typing import Optional
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional
 from latlng import LatLng
 from ng_ran_report import NGRANReport
+
+if TYPE_CHECKING:
+    from user_equipment import UserEquipment
 
 
 class BaseTower:
