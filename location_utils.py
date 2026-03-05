@@ -1,8 +1,8 @@
-import math
+import numpy as np
 from latlng import LatLng
 
 
-class Utils:
+class LocationUtils:
     __earth_radius_meters = 6371000.0
 
     @staticmethod
@@ -16,13 +16,13 @@ class Utils:
         lon2: float = pointB.long
 
         # Radius of the Earth in meters. Use 3958.8 for miles.
-        R = Utils.__earth_radius_meters
+        R = LocationUtils.__earth_radius_meters
 
         # Convert latitude and longitude from degrees to radians
-        lat1_rad = math.radians(lat1)
-        lon1_rad = math.radians(lon1)
-        lat2_rad = math.radians(lat2)
-        lon2_rad = math.radians(lon2)
+        lat1_rad = np.radians(lat1)
+        lon1_rad = np.radians(lon1)
+        lat2_rad = np.radians(lat2)
+        lon2_rad = np.radians(lon2)
 
         # Difference in coordinates
         dlat = lat2_rad - lat1_rad
@@ -30,10 +30,10 @@ class Utils:
 
         # The Haversine formula
         a = (
-            math.sin(dlat / 2) ** 2
-            + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2) ** 2
+            np.sin(dlat / 2) ** 2
+            + np.cos(lat1_rad) * np.cos(lat2_rad) * np.sin(dlon / 2) ** 2
         )
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        c = 2 * np.atan2(np.sqrt(a), np.sqrt(1 - a))
 
         # Calculate the final distance
         distance = R * c
@@ -47,32 +47,32 @@ class Utils:
         0 degrees is North, 90 is East, 180 is South, 270 is West.
         """
         # Earth's radius in meters
-        R = Utils.__earth_radius_meters
+        R = LocationUtils.__earth_radius_meters
 
         # Convert current latitude, longitude, and angle to radians
-        lat1_rad = math.radians(point.lat)
-        lon1_rad = math.radians(point.long)
-        angle_rad = math.radians(angle)
+        lat1_rad = np.radians(point.lat)
+        lon1_rad = np.radians(point.long)
+        angle_rad = np.radians(angle)
 
         # Calculate the angular distance (distance divided by radius)
         ad = distance / R
 
         # Calculate new latitude
-        lat2_rad = math.asin(
-            math.sin(lat1_rad) * math.cos(ad)
-            + math.cos(lat1_rad) * math.sin(ad) * math.cos(angle_rad)
+        lat2_rad = np.asin(
+            np.sin(lat1_rad) * np.cos(ad)
+            + np.cos(lat1_rad) * np.sin(ad) * np.cos(angle_rad)
         )
 
         # Calculate new longitude
-        lon2_rad = lon1_rad + math.atan2(
-            math.sin(angle_rad) * math.sin(ad) * math.cos(lat1_rad),
-            math.cos(ad) - math.sin(lat1_rad) * math.sin(lat2_rad),
+        lon2_rad = lon1_rad + np.atan2(
+            np.sin(angle_rad) * np.sin(ad) * np.cos(lat1_rad),
+            np.cos(ad) - np.sin(lat1_rad) * np.sin(lat2_rad),
         )
 
         # Update the car's state back in degrees
-        latitude = math.degrees(lat2_rad)
+        latitude = np.degrees(lat2_rad)
 
         # Normalize longitude to stay between -180 and +180
-        longitude = (math.degrees(lon2_rad) + 540) % 360 - 180
+        longitude = (np.degrees(lon2_rad) + 540) % 360 - 180
 
         return LatLng(lat=latitude, long=longitude)
