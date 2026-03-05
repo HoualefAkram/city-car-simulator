@@ -12,7 +12,7 @@ class WaveUtils:
 
     @staticmethod
     def pd0(f_c: float, d0: float = 1):
-        # PL(d0) = 20·log10(4π·d0·f_c / c)
+        # PL(d0) = 20 * log10(4 pi * d0 * f_c / c)
         return 20 * np.log10(4 * np.pi * d0 * f_c / WaveUtils.__c)
 
     @staticmethod
@@ -22,7 +22,7 @@ class WaveUtils:
     @staticmethod
     def calculate_rsrp(bs: BaseTower, ue: UserEquipment):
         # RSRP (dBm) = P_tx + G_tx + G_rx - PL(d) - L_shadow (TODO: add later) - L_fast (TODO: add later)
-        # PL(d) = PL(d0) + 10·n·log10(d/d0)
+        # PL(d) = PL(d0) + 10 * n * log10(d/d0)
         # n: path loss exponent: NLOS 2.7 - 3.5, LOS 2 - 2.5
         p_tx = bs.p_tx  # transimition power
         g_tx = bs.g_tx  # transimition GAIN
@@ -45,8 +45,11 @@ class WaveUtils:
     def calculate_rssi(
         all_rsrp_dBm: list[float],
         bandwidth_hz: float,
-        noise_figure_db: float = 7.0,  # In a perfect world, the UE antenna would receive signals with zero added noise. In reality, the **UE's hardware (amplifiers, circuits) adds some noise** on top of what it receives. `noise_figure_db` measures how much extra noise the hardware adds.
+        noise_figure_db: float = 7.0,  # In a perfect world, the UE antenna would receive signals with zero added noise. In reality, the UE's hardware (amplifiers, circuits) adds some noise on top of what it receives. `noise_figure_db` measures how much extra noise the hardware adds.
     ) -> float:
+        # RSSI (dBm) = BS signals (dominant) + thermal noise + UE interference (negligible)
+        # convert to linear then sum: total = 10^(RSRP_bs1/10) + 10^(RSRP_bs2/10) + 10^(noise/10)
+        # convert back to dBm: RSSI  = 10 * log10(total)
         # Thermal noise floor
         noise_dBm = -174 + 10 * np.log10(bandwidth_hz) + noise_figure_db
         # Convert all signals + noise to linear and sum
@@ -57,7 +60,4 @@ class WaveUtils:
 
     @staticmethod
     def calculate_rsrq(rsrp: float, n: int, rssi: float):
-        # RSSI in dBm
-        # convert to linear then sum: total = 10^(RSRP_bs1/10) + 10^(RSRP_bs2/10) + 10^(noise/10)
-        # convert back to dBm: RSSI  = 10·log10(total)
         return 10 * np.log10(n) + rsrp - rssi
