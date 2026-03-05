@@ -2,6 +2,7 @@ from user_equipment import UserEquipment
 from base_tower import BaseTower
 from latlng import LatLng
 from wave_utils import WaveUtils
+from location_utils import LocationUtils
 
 
 bs1 = BaseTower(
@@ -20,11 +21,17 @@ car = UserEquipment(
     serving_bs=bs1,  # starts connected to bs1
 )
 
+d1 = LocationUtils.haversine(pointA=car.latlng, pointB=bs1.latlng)
+print(f"distance before the car moved: {d1}")
+
 
 rsrp1 = WaveUtils.calculate_rsrp(ue=car, bs=bs1)
 print(f"rsrp1: {rsrp1:.2f} dBm")
 
 car.move_meters(200, angle=90)
+
+d2 = LocationUtils.haversine(pointA=car.latlng, pointB=bs1.latlng)
+print(f"distance after the car moved: {d2}")
 
 rsrp2 = WaveUtils.calculate_rsrp(ue=car, bs=bs1)
 print(f"rsrp2: {rsrp2:.2f} dBm")
