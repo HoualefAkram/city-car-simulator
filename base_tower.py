@@ -27,5 +27,17 @@ class BaseTower:
         self.g_tx = g_tx
         self.frequency = frequency
 
+    def __repr__(self):
+        return f"BaseTower(id: {self.id}, connected_ues: {len(self.connected_ues)})"
+
+    def __str__(self):
+        return f"BaseTower(id: {self.id}, connected_ues: {len(self.connected_ues)})"
+
     def receive_report(self, report: NGRANReport):
         self.last_report = report
+
+    def add_ue(self, ue: UserEquipment):
+        self.connected_ues.append(ue)
+
+    def remove_ue(self, ue_id: int):
+        self.connected_ues = [ue for ue in self.connected_ues if ue.id != ue_id]

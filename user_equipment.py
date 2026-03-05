@@ -18,6 +18,12 @@ class UserEquipment:
         self.latlng: LatLng = latlng
         self.serving_bs = serving_bs
 
+    def __repr__(self):
+        return f"UserEquipment(id: {self.id}, latlng: {self.latlng}, serving_bs: {self.serving_bs.id})"
+
+    def __str__(self):
+        return f"UserEquipment(id: {self.id}, latlng: {self.latlng}, serving_bs: {self.serving_bs.id})"
+
     def move_deg(self, lat_offset: float, long_offset: float):
         new_latitude = self.latlng.lat + lat_offset
         new_longitude = self.latlng.long + long_offset
