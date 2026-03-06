@@ -2,6 +2,8 @@ from latlng import LatLng
 from location_utils import LocationUtils
 from typing import Optional
 from base_tower import BaseTower
+from ng_ran_report import NGRANReport
+from wave_utils import WaveUtils
 
 
 class UserEquipment:
@@ -37,3 +39,28 @@ class UserEquipment:
 
     def move_to(self, latlng: LatLng):
         self.latlng = latlng
+
+    def generate_report(self, all_bs: list[BaseTower]) -> NGRANReport:
+        rsrp_values = {}
+        rsrq_values = {}
+
+        # calculate rsrp
+        for bs in all_bs:
+            rsrp_values[bs.id] = WaveUtils.calculate_rsrp(ue=self, bs=bs)
+
+        # calculate rsrq
+        all_rsrp_dBm = list(rsrp_values.values())
+
+        for bs in all_bs:
+            rsrq = WaveUtils.calculate_rsrq(
+                serving_tower=bs,
+                serving_rsrp=rsrp_values[bs.id],
+                all_rsrp_dBm=all_rsrp_dBm,
+            )
+            rsrq_values[bs.id] = rsrq
+
+        return NGRANReport(
+            ue_id=self.id,
+            rsrp_values=rsrp_values,
+            rsrq_values=rsrq_values,
+        )
