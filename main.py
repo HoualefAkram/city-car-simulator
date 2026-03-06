@@ -52,3 +52,5 @@ car.move_meters(200, angle=270)
 
 rsrp4 = WaveUtils.calculate_rsrp(ue=car, bs=bs2)
 print(f"rsrp4: {rsrp4:.2f} dBm")
+
+print(car.generate_report(all_bs=[bs1, bs2, bs3]))
