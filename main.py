@@ -1,7 +1,6 @@
 from user_equipment import UserEquipment
 from base_tower import BaseTower
 from latlng import LatLng
-from wave_utils import WaveUtils
 from render import Render
 
 
@@ -29,34 +28,25 @@ car = UserEquipment(
     id=100,
     latlng=LatLng(35.717122, -0.540052),  # Home
     serving_bs=bs2,  # starts connected to bs2
+    all_bs=[bs1, bs2, bs3],
+    print_report_on_movement=True,
 )
+
 bs2.add_ue(ue=car)
-ue_path = [car.latlng]
 
-
-rsrp1 = WaveUtils.calculate_rsrp(ue=car, bs=bs2)
-print(f"rsrp1: {rsrp1:.2f} dBm")
 
 car.move_meters(70, angle=270)
-ue_path.append(car.latlng)
-
-rsrp2 = WaveUtils.calculate_rsrp(ue=car, bs=bs2)
-print(f"rsrp2: {rsrp2:.2f} dBm")
-
 
 car.move_meters(56, angle=340)
-ue_path.append(car.latlng)
-
-rsrp3 = WaveUtils.calculate_rsrp(ue=car, bs=bs2)
-print(f"rsrp3: {rsrp3:.2f} dBm")
 
 car.move_meters(200, angle=275)
-ue_path.append(car.latlng)
 
+car.move_to(LatLng(35.717828, -0.543586))
 
-rsrp4 = WaveUtils.calculate_rsrp(ue=car, bs=bs2)
-print(f"rsrp4: {rsrp4:.2f} dBm")
+car.move_to(LatLng(35.718751, -0.542647))
 
-print(car.generate_report(all_bs=[bs1, bs2, bs3]))
+car.move_to(LatLng(35.717649, -0.539176))
 
-Render.render_map(bs_list=[bs1, bs2, bs3], ue=car, ue_path=ue_path)
+car.move_to(LatLng(35.717148, -0.539289))
+
+Render.render_map(bs_list=[bs1, bs2, bs3], ue=car, output="output.html")
