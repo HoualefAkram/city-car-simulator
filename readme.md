@@ -161,6 +161,13 @@ car = UserEquipment(
 
 ---
 
+## SUMO commands
+netconvert --osm-files home_map.osm --output-file home_map.net.xml
+randomTrips.py -n home_map.net.xml -e 1000 -o home_trips.xml
+duarouter -n home_map.net.xml --route-files home_trips.xml -o home.rou.xml --ignore-errors
+
+---
+
 ## 🤖 Roadmap
 
 - [x] Log-distance path loss model
