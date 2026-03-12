@@ -1,9 +1,9 @@
-from latlng import LatLng
-from location_utils import LocationUtils
+from data_models.latlng import LatLng
+from utils.location_utils import LocationUtils
 from typing import Optional
-from base_tower import BaseTower
-from ng_ran_report import NGRANReport
-from wave_utils import WaveUtils
+from data_models.base_tower import BaseTower
+from data_models.ng_ran_report import NGRANReport
+from utils.wave_utils import WaveUtils
 
 
 class UserEquipment:

@@ -1,11 +1,11 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from base_tower import BaseTower
-from location_utils import LocationUtils
+from data_models.base_tower import BaseTower
+from utils.location_utils import LocationUtils
 import numpy as np
 
 if TYPE_CHECKING:
-    from user_equipment import UserEquipment
+    from data_models.user_equipment import UserEquipment
 
 
 class WaveUtils:

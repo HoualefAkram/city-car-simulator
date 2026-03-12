@@ -1,7 +1,7 @@
-from user_equipment import UserEquipment
-from base_tower import BaseTower
-from latlng import LatLng
-from render import Render
+from data_models.user_equipment import UserEquipment
+from data_models.base_tower import BaseTower
+from data_models.latlng import LatLng
+from utils.render import Render
 
 
 bs1 = BaseTower(
@@ -49,4 +49,4 @@ car.move_to(LatLng(35.717649, -0.539176))
 
 car.move_to(LatLng(35.717148, -0.539289))
 
-Render.render_map(bs_list=[bs1, bs2, bs3], ue=car, output="output.html")
+Render.render_map(bs_list=[bs1, bs2, bs3], ue=car)

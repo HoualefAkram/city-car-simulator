@@ -1,5 +1,5 @@
 import numpy as np
-from latlng import LatLng
+from data_models.latlng import LatLng
 
 
 class LocationUtils:

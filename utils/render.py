@@ -1,12 +1,14 @@
 import folium
-from base_tower import BaseTower
-from user_equipment import UserEquipment
+from data_models.base_tower import BaseTower
+from data_models.user_equipment import UserEquipment
 
 
 class Render:
     @staticmethod
     def render_map(
-        bs_list: list[BaseTower], ue: UserEquipment, output: str = "simulation.html"
+        bs_list: list[BaseTower],
+        ue: UserEquipment,
+        output: str = "outputs/simulation.html",
     ):
         m = folium.Map(
             location=[bs_list[0].latlng.lat, bs_list[0].latlng.long], zoom_start=16

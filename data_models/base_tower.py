@@ -1,10 +1,10 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
-from latlng import LatLng
-from ng_ran_report import NGRANReport
+from data_models.latlng import LatLng
+from data_models.ng_ran_report import NGRANReport
 
 if TYPE_CHECKING:
-    from user_equipment import UserEquipment
+    from data_models.user_equipment import UserEquipment
 
 
 class BaseTower:
