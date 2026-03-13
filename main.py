@@ -8,46 +8,73 @@ from utils.render import Render
 from utils.trace_parser import TraceParser
 
 
-MAP_TOP_LEFT = LatLng(35.734904, -0.578253)
-MAP_BOTTOM_RIGHT = LatLng(35.698884, -0.513860)
-NUMBER_OF_UE = 20
-# --- outputs ---
-OSM_DOWNLOAD_PATH = "maps/map.osm"
+def run_simulation(
+    top_left: LatLng,
+    bottom_right: LatLng,
+    num_ue: int,
+    osm_download_path: str = "maps/map.osm",
+) -> None:
+    """Runs the complete city car simulator pipeline."""
 
-MapDownloader.download_osm_by_bbox(
-    top_left=MAP_TOP_LEFT,
-    bottom_right=MAP_BOTTOM_RIGHT,
-    output_file=OSM_DOWNLOAD_PATH,
-)
+    print(f"--- Starting Simulation for {num_ue} UEs ---")
 
-
-bs_list: list[BaseTower] = TowerDownloader.get_towers_in_bbox(
-    top_left=MAP_TOP_LEFT,
-    bottom_right=MAP_BOTTOM_RIGHT,
-)
-
-
-cars = [
-    UserEquipment(
-        id=i,
-        serving_bs=bs_list[0],  # starts connected to bs0
-        all_bs=bs_list,
-        print_report_on_movement=True,
+    # 1. Download Map
+    MapDownloader.download_osm_by_bbox(
+        top_left=top_left,
+        bottom_right=bottom_right,
+        output_file=osm_download_path,
     )
-    for i in range(NUMBER_OF_UE)
-]
 
-for i in range(NUMBER_OF_UE):
-    bs_list[0].add_ue(ue=cars[i])
+    # 2. Fetch Base Stations
+    bs_list: list[BaseTower] = TowerDownloader.get_towers_in_bbox(
+        top_left=top_left,
+        bottom_right=bottom_right,
+    )
 
-path_gen = PathGeneration(stop_trip_generation_after=NUMBER_OF_UE)
-path_gen.run()
+    if not bs_list:
+        print("Error: No base stations found in this area. Exiting.")
+        return
 
-vehicle_paths = TraceParser.parse_fcd_trace()
+    # 3. Initialize User Equipment (Cars)
+    cars: dict[int, UserEquipment] = {
+        i: UserEquipment(
+            id=i,
+            serving_bs=bs_list[0],  # All start connected to bs0
+            all_bs=bs_list,
+            print_report_on_movement=True,
+        )
+        for i in range(num_ue)
+    }
 
-for id, path in vehicle_paths.items():
-    car = cars[id]
-    for point in path:
-        car.move_to(point)
+    for car in cars.values():
+        bs_list[0].add_ue(ue=car)
 
-Render.render_map(bs_list=bs_list, ue_list=cars)
+    # 4. Generate Traffic Paths via SUMO
+    path_gen = PathGeneration(stop_trip_generation_after=num_ue)
+    path_gen.run()
+
+    # 5. Parse Trace and Move Cars
+    timesteps: list[dict[int, LatLng]] = TraceParser.parse_fcd_trace()
+
+    print("--- Simulating Movement and Network Logic ---")
+    for timestep in timesteps:
+        for car_id, location in timestep.items():
+            if car_id in cars:  # Safe check in case SUMO spawned extra vehicles
+                car = cars[car_id]
+                car.move_to(location)
+
+    # 6. Render Final Map
+    print("--- Rendering Final Output ---")
+    Render.render_map(bs_list=bs_list, ue_list=list(cars.values()))
+
+
+if __name__ == "__main__":
+    # --- Configuration Parameters ---
+    MAP_TOP_LEFT = LatLng(35.734904, -0.578253)
+    MAP_BOTTOM_RIGHT = LatLng(35.698884, -0.513860)
+    NUMBER_OF_UE = 20
+
+    # Execute the pipeline
+    run_simulation(
+        top_left=MAP_TOP_LEFT, bottom_right=MAP_BOTTOM_RIGHT, num_ue=NUMBER_OF_UE
+    )

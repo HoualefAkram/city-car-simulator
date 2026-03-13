@@ -8,24 +8,21 @@ class TraceParser:
     @staticmethod
     def parse_fcd_trace(
         trace_file: int = "outputs/sumo/trace.xml",
-    ) -> dict[int, list[LatLng]]:
+    ) -> list[dict[int, LatLng]]:
         if not Path(trace_file).exists():
             raise FileNotFoundError(f"Trace file not found: {trace_file}")
 
         tree = ET.parse(trace_file)
         root = tree.getroot()
 
-        vehicle_paths = {}
+        timesteps = []
         for timestep in root.findall("timestep"):
+            snapshot = {}
             for vehicle in timestep.findall("vehicle"):
                 veh_id = int(vehicle.get("id"))
-
                 lon = float(vehicle.get("x"))
                 lat = float(vehicle.get("y"))
+                snapshot[veh_id] = LatLng(lat, lon)
+            timesteps.append(snapshot)
 
-                if veh_id not in vehicle_paths:
-                    vehicle_paths[veh_id] = []
-
-                vehicle_paths[veh_id].append(LatLng(lat, lon))
-
-        return vehicle_paths
+        return timesteps
