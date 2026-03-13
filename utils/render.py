@@ -1,6 +1,7 @@
 import folium
 from data_models.base_tower import BaseTower
 from data_models.user_equipment import UserEquipment
+from pathlib import Path
 
 
 _UE_COLORS = ["blue", "purple", "orange", "darkred", "cadetblue", "darkgreen", "pink"]
@@ -13,6 +14,7 @@ class Render:
         ue_list: list[UserEquipment] | UserEquipment,
         output: str = "outputs/folium/simulation.html",
     ):
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
         if isinstance(ue_list, UserEquipment):
             ue_list = [ue_list]
 

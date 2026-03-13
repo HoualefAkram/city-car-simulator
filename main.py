@@ -10,7 +10,7 @@ from utils.trace_parser import TraceParser
 
 MAP_TOP_LEFT = LatLng(35.734904, -0.578253)
 MAP_BOTTOM_RIGHT = LatLng(35.698884, -0.513860)
-NUMBER_OF_UE = 2
+NUMBER_OF_UE = 20
 # --- outputs ---
 OSM_DOWNLOAD_PATH = "maps/map.osm"
 
