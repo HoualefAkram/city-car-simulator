@@ -9,7 +9,7 @@ from utils.trace_parser import TraceParser
 
 MAP_TOP_LEFT = LatLng(35.734904, -0.578253)
 MAP_BOTTOM_RIGHT = LatLng(35.698884, -0.513860)
-NUMBER_OF_UE = 1
+NUMBER_OF_UE = 2
 # --- outputs ---
 OSM_DOWNLOAD_PATH = "maps/map.osm"
 
@@ -40,24 +40,27 @@ bs3 = BaseTower(
 )
 
 
-car = UserEquipment(
-    id=0,
-    serving_bs=bs2,  # starts connected to bs2
-    all_bs=[bs1, bs2, bs3],
-    print_report_on_movement=True,
-)
+cars = [
+    UserEquipment(
+        id=i,
+        serving_bs=bs2,  # starts connected to bs2
+        all_bs=[bs1, bs2, bs3],
+        print_report_on_movement=True,
+    )
+    for i in range(NUMBER_OF_UE)
+]
 
-bs2.add_ue(ue=car)
+for i in range(NUMBER_OF_UE):
+    bs2.add_ue(ue=cars[i])
 
-path_gen = PathGeneration(stop_trip_generation_after=1)
+path_gen = PathGeneration(stop_trip_generation_after=NUMBER_OF_UE)
 path_gen.run()
 
 vehicle_paths = TraceParser.parse_fcd_trace()
 
+for id, path in vehicle_paths.items():
+    car = cars[id]
+    for point in path:
+        car.move_to(point)
 
-car_paths = vehicle_paths[str(car.id)]
-
-for path in car_paths:
-    car.move_to(path)
-
-Render.render_map(ue=car, output="output.html", bs_list=[bs1, bs2, bs3])
+Render.render_map(bs_list=[bs1, bs2, bs3], ue_list=cars)
