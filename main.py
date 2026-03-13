@@ -1,6 +1,7 @@
 from data_models.user_equipment import UserEquipment
 from data_models.base_tower import BaseTower
 from data_models.latlng import LatLng
+from utils.path_gen import PathGeneration
 from utils.render import Render
 
 
@@ -25,7 +26,7 @@ bs3 = BaseTower(
 
 
 car = UserEquipment(
-    id=100,
+    id=0,
     latlng=LatLng(35.717122, -0.540052),  # Home
     serving_bs=bs2,  # starts connected to bs2
     all_bs=[bs1, bs2, bs3],
@@ -34,19 +35,5 @@ car = UserEquipment(
 
 bs2.add_ue(ue=car)
 
-
-car.move_meters(70, angle=270)
-
-car.move_meters(56, angle=340)
-
-car.move_meters(200, angle=275)
-
-car.move_to(LatLng(35.717828, -0.543586))
-
-car.move_to(LatLng(35.718751, -0.542647))
-
-car.move_to(LatLng(35.717649, -0.539176))
-
-car.move_to(LatLng(35.717148, -0.539289))
-
-Render.render_map(bs_list=[bs1, bs2, bs3], ue=car)
+path_gen = PathGeneration(stop_trip_generation_after=1)
+path_gen.run()
