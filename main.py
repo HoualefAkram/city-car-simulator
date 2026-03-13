@@ -2,7 +2,14 @@ from data_models.user_equipment import UserEquipment
 from data_models.base_tower import BaseTower
 from data_models.latlng import LatLng
 from utils.path_gen import PathGeneration
+from utils.map_downloader import MapDownloader
 from utils.render import Render
+
+MapDownloader.download_osm_by_bbox(
+    top_left=LatLng(35.734904, -0.578253),
+    bottom_right=LatLng(35.698884, -0.513860),
+    output_file="maps/map.osm",
+)
 
 
 bs1 = BaseTower(
