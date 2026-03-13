@@ -71,6 +71,7 @@ class PathGeneration:
             self.trips,
             "--seed",
             str(self.seed),
+            "--no-validate",
         ]
         duarouter_cmd = [
             duarouter_exec,
