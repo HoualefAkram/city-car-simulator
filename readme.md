@@ -177,9 +177,8 @@ duarouter -n home_map.net.xml --route-files home_trips.xml -o home.rou.xml --ign
 - [x] Map visualization (Folium)
 - [x] A3 handover event trigger (hysteresis-based)
 - [x] Multiple UEs
-- [ ] RL agent for handover optimization (PPO / DQN)
 - [ ] Performance metrics (ping-pong rate, handover failures)
-- [ ] Shadowing / slow fading (log-normal)
+- [ ] Shadowing / slow fading (Long finger)
 
 ---
 
