@@ -28,7 +28,7 @@ class Render:
                 location=[bs.latlng.lat, bs.latlng.long],
                 tooltip=f"BS {bs.id}",
                 popup=f"BS{bs.id} | {bs.frequency/1e9:.1f}GHz | {bs.p_tx}dBm",
-                icon=folium.Icon(color="red", icon="tower-cell", prefix="fa"),
+                icon=folium.Icon(color="black", icon="tower-cell", prefix="fa"),
             ).add_to(m)
 
         for i, ue in enumerate(ue_list):
