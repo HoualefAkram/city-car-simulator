@@ -50,7 +50,9 @@ class UserEquipment:
         if target_bs:
             # Log handover decision, (or if the user connected for the first time)
             if self.serving_bs:
-                print(f"\033[31mUE {self.id} handover from BS {self.serving_bs.id} to BS {target_bs.id}\033[0m")
+                print(
+                    f"\033[31mUE {self.id} handover from BS {self.serving_bs.id} to BS {target_bs.id}\033[0m"
+                )
             else:
                 print(f"\033[32mUE {self.id} connecting to BS {target_bs.id}\033[0m")
             self.handover(target_bs=target_bs)
@@ -123,6 +125,6 @@ class UserEquipment:
     def handover(self, target_bs: BaseTower):
         """Performs handover to the target base station."""
         if self.serving_bs:
-            self.serving_bs.remove_ue(self)
+            self.serving_bs.remove_ue(self.id)
         target_bs.add_ue(self)
         self.serving_bs = target_bs

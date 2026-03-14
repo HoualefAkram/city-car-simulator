@@ -41,13 +41,10 @@ def run_simulation(
         i: UserEquipment(
             id=i,
             all_bs=bs_list,
-            print_report_on_movement=True,
+            print_report_on_movement=False,
         )
         for i in range(num_ue)
     }
-
-    for car in cars.values():
-        bs_list[0].add_ue(ue=car)
 
     # 4. Generate Traffic Paths via SUMO
     path_gen = PathGeneration(stop_trip_generation_after=num_ue, seed=seed)
@@ -66,6 +63,9 @@ def run_simulation(
     # 6. Render Final Map
     print("--- Rendering Final Output ---")
     Render.render_map(bs_list=bs_list, ue_list=list(cars.values()))
+
+    for bs in bs_list:
+        print(f"Base Station {bs.id} served UEs: {[ue.id for ue in bs.connected_ues]}")
 
 
 if __name__ == "__main__":
