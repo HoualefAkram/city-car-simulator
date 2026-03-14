@@ -1,7 +1,6 @@
 from typing import Optional
 from data_models.latlng import LatLng
 from utils.location_utils import LocationUtils
-from typing import Optional
 from data_models.base_tower import BaseTower
 from data_models.ng_ran_report import NGRANReport
 from utils.wave_utils import WaveUtils
@@ -27,10 +26,10 @@ class UserEquipment:
         self.print_report_on_movement = print_report_on_movement
 
     def __repr__(self):
-        return f"UserEquipment(id: {self.id}, latlng: {self.latlng}, serving_bs: {self.serving_bs.id})"
+        return f"UserEquipment(id: {self.id}, latlng: {self.latlng}, serving_bs: {self.serving_bs.id if self.serving_bs else None})"
 
     def __str__(self):
-        return f"UserEquipment(id: {self.id}, latlng: {self.latlng}, serving_bs: {self.serving_bs.id})"
+        return f"UserEquipment(id: {self.id}, latlng: {self.latlng}, serving_bs: {self.serving_bs.id if self.serving_bs else None})"
 
     def toggle_report_print(self, value: bool):
         self.print_report_on_movement = value

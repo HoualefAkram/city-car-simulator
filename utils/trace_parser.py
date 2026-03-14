@@ -7,7 +7,7 @@ class TraceParser:
 
     @staticmethod
     def parse_fcd_trace(
-        trace_file: int = "outputs/sumo/trace.xml",
+        trace_file: str = "outputs/sumo/trace.xml",
     ) -> list[dict[int, LatLng]]:
         if not Path(trace_file).exists():
             raise FileNotFoundError(f"Trace file not found: {trace_file}")

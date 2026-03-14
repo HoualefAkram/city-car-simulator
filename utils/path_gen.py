@@ -125,4 +125,4 @@ class PathGeneration:
 
     @staticmethod
     def quick_run(osm_file: str = "maps/map.osm", gui: bool = False):
-        PathGeneration(osm_file=osm_file, gui=gui, seed=randint(-10000, 10000)).run()
+        PathGeneration(osm_file=osm_file, gui=gui, seed=randint(0, 10000)).run()
