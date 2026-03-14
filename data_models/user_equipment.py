@@ -22,7 +22,7 @@ class UserEquipment:
         self.g_rx: float = g_rx  # 0 to +2 dBi
         self.latlng: LatLng = latlng
         self.serving_bs = serving_bs
-        self.path_history: list[LatLng] = list(latlng) if (latlng) else list()
+        self.path_history: list[LatLng] = [] if latlng is None else [latlng]
         self.all_bs = all_bs
         self.print_report_on_movement = print_report_on_movement
 
@@ -37,25 +37,40 @@ class UserEquipment:
 
     def __append_path_history(self) -> None:
         self.path_history.append(self.latlng)
+
+    def __on_movement(self):
+        self.__append_path_history()
+        report = self.generate_report(all_bs=self.all_bs)
+        # Logs
         if self.print_report_on_movement:
-            print(self.generate_report(all_bs=self.all_bs))
+            print(report)
+
+        # Check for handover
+        target_bs = self.check_handover_3gpp_rsrp(report=report)
+        if target_bs:
+            # Log handover decision, (or if the user connected for the first time)
+            if self.serving_bs:
+                print(f"\033[31mUE {self.id} handover from BS {self.serving_bs.id} to BS {target_bs.id}\033[0m")
+            else:
+                print(f"\033[32mUE {self.id} connecting to BS {target_bs.id}\033[0m")
+            self.handover(target_bs=target_bs)
 
     def move_deg(self, lat_offset: float, long_offset: float):
         new_latitude = self.latlng.lat + lat_offset
         new_longitude = self.latlng.long + long_offset
         self.latlng = LatLng(lat=new_latitude, long=new_longitude)
-        self.__append_path_history()
+        self.__on_movement()
 
     def move_meters(self, distance: float, angle: float = 0.0):
         new_point: LatLng = LocationUtils.move_meters(
             point=self.latlng, distance=distance, angle=angle
         )
         self.latlng = new_point
-        self.__append_path_history()
+        self.__on_movement()
 
     def move_to(self, latlng: LatLng):
         self.latlng = latlng
-        self.__append_path_history()
+        self.__on_movement()
 
     def generate_report(self, all_bs: list[BaseTower]) -> NGRANReport:
         rsrp_values = {}
@@ -81,3 +96,33 @@ class UserEquipment:
             rsrp_values=rsrp_values,
             rsrq_values=rsrq_values,
         )
+
+    def check_handover_3gpp_rsrp(
+        self, report: NGRANReport, handover_threshold: float = 3.0
+    ) -> Optional[BaseTower]:
+        """Checks if a handover is needed based on 3GPP RSRP criteria."""
+        # If serving bs is null, connect to the best available option
+        if self.serving_bs is None:
+            if not report.rsrp_values:
+                return None
+            best_bs_id = max(report.rsrp_values, key=report.rsrp_values.get)
+            best_bs = next((bs for bs in self.all_bs if bs.id == best_bs_id), None)
+            return best_bs
+        serving_rsrp = report.rsrp_values[self.serving_bs.id]
+
+        for bs_id, rsrp in report.rsrp_values.items():
+            if bs_id == self.serving_bs.id:
+                continue  # Skip current serving BS
+
+            if rsrp > serving_rsrp + handover_threshold:
+                # Find the BaseTower object for this bs_id
+                target_bs = next((bs for bs in self.all_bs if bs.id == bs_id), None)
+                return target_bs
+        return None
+
+    def handover(self, target_bs: BaseTower):
+        """Performs handover to the target base station."""
+        if self.serving_bs:
+            self.serving_bs.remove_ue(self)
+        target_bs.add_ue(self)
+        self.serving_bs = target_bs

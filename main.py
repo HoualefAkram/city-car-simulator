@@ -12,6 +12,7 @@ def run_simulation(
     top_left: LatLng,
     bottom_right: LatLng,
     num_ue: int,
+    seed: int = 42,
     osm_download_path: str = "maps/map.osm",
 ) -> None:
     """Runs the complete city car simulator pipeline."""
@@ -39,7 +40,6 @@ def run_simulation(
     cars: dict[int, UserEquipment] = {
         i: UserEquipment(
             id=i,
-            serving_bs=bs_list[0],  # All start connected to bs0
             all_bs=bs_list,
             print_report_on_movement=True,
         )
@@ -50,7 +50,7 @@ def run_simulation(
         bs_list[0].add_ue(ue=car)
 
     # 4. Generate Traffic Paths via SUMO
-    path_gen = PathGeneration(stop_trip_generation_after=num_ue)
+    path_gen = PathGeneration(stop_trip_generation_after=num_ue, seed=seed)
     path_gen.run()
 
     # 5. Parse Trace and Move Cars
@@ -72,9 +72,13 @@ if __name__ == "__main__":
     # --- Configuration Parameters ---
     MAP_TOP_LEFT = LatLng(35.734904, -0.578253)
     MAP_BOTTOM_RIGHT = LatLng(35.698884, -0.513860)
-    NUMBER_OF_UE = 20
+    NUMBER_OF_UE = 1
+    SEED = 100
 
     # Execute the pipeline
     run_simulation(
-        top_left=MAP_TOP_LEFT, bottom_right=MAP_BOTTOM_RIGHT, num_ue=NUMBER_OF_UE
+        top_left=MAP_TOP_LEFT,
+        bottom_right=MAP_BOTTOM_RIGHT,
+        num_ue=NUMBER_OF_UE,
+        seed=SEED,
     )

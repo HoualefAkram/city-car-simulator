@@ -57,3 +57,4 @@ class Render:
             ).add_to(m)
 
         m.save(output)
+        print(f"Map rendered and saved to {output}")
