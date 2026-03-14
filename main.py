@@ -65,7 +65,9 @@ def run_simulation(
     Render.render_map(bs_list=bs_list, ue_list=list(cars.values()))
 
     for bs in bs_list:
-        print(f"Base Station {bs.id} served UEs: {[ue.id for ue in bs.connected_ues]}")
+        print(
+            f"\033[35mBase Station {bs.id} served UEs: {[ue.id for ue in bs.connected_ues]}\033[0m"
+        )
 
 
 if __name__ == "__main__":
