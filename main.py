@@ -7,6 +7,8 @@ from utils.tower_downloader import TowerDownloader
 from utils.render import Render
 from utils.trace_parser import TraceParser
 from colorama import Fore, Style, init
+import webbrowser
+from pathlib import Path
 
 init(autoreset=True)
 
@@ -17,6 +19,8 @@ def run_simulation(
     num_ue: int,
     seed: int = 42,
     osm_download_path: str = "maps/map.osm",
+    show_folium_output: bool = True,
+    folium_output: str = "outputs/folium/simulation.html",
 ) -> None:
     """Runs the complete city car simulator pipeline."""
 
@@ -69,13 +73,17 @@ def run_simulation(
 
     # 6. Render Final Map
     print(Fore.CYAN + Style.BRIGHT + "--- Rendering Final Output ---")
-    Render.render_map(bs_list=bs_list, ue_list=list(cars.values()))
+    Render.render_map(
+        bs_list=bs_list, ue_list=list(cars.values()), output=folium_output
+    )
 
     for bs in bs_list:
         print(
             Fore.BLUE
             + f"Base Station {bs.id} served UEs: {[ue.id for ue in bs.connected_ues]}"
         )
+    if show_folium_output:
+        webbrowser.open(Path(folium_output).resolve())
 
 
 if __name__ == "__main__":
