@@ -54,7 +54,7 @@ class Render:
             if ue.latlng:
                 folium.Marker(
                     location=[ue.latlng.lat, ue.latlng.long],
-                    tooltip=f"UE {ue.id}",
+                    tooltip=f"UE {ue.id} (end)",
                     icon=folium.Icon(color=color, icon="car", prefix="fa"),
                 ).add_to(m)
 
