@@ -14,8 +14,8 @@ This simulator models that process from first principles using real map data, re
 
 ## Features
 
-- **Real city maps** — downloads street maps from OpenStreetMap via Overpass API
-- **Real tower data** — fetches live LTE/NR tower locations from OpenCellID
+- **Real city maps** — downloads street maps from OpenStreetMap via Overpass API, cached locally to avoid redundant downloads
+- **Real tower data** — fetches live LTE/NR tower locations from OpenCellID, cached locally to avoid redundant API calls
 - **Realistic vehicle movement** — uses SUMO (Simulation of Urban Mobility) to generate traffic on actual streets
 - **3GPP-compliant signal model** — log-distance path loss, RSRP, RSRQ, thermal noise
 - **3GPP A3 handover logic** — hysteresis-based handover decisions (3 dB margin)
@@ -39,15 +39,16 @@ city-car-simulator/
 │
 ├── utils/
 │   ├── wave_utils.py           # RSRP, RSRQ, RSSI calculations
-│   ├── location_utils.py       # Haversine distance, move_meters
+│   ├── location_utils.py       # Haversine distance, move_meters, coord comparison
 │   ├── path_gen.py             # SUMO traffic generation interface
-│   ├── map_downloader.py       # OSM map downloader (Overpass API)
+│   ├── map_downloader.py       # OSM map downloader (Overpass API) with bbox cache
 │   ├── osm_parser.py           # OSM file bounds parser
-│   ├── tower_downloader.py     # OpenCellID tower fetcher
+│   ├── tower_downloader.py     # OpenCellID tower fetcher with bbox cache
 │   ├── render.py               # Folium map visualization
 │   └── fcd_parser.py           # SUMO FCD XML parser
 │
-├── maps/                       # Cached OSM map files
+├── maps/                       # Cached OSM map files (git-ignored)
+├── cache/                      # Cached API responses (git-ignored)
 ├── outputs/
 │   ├── sumo/                   # SUMO network, routes, FCD traces
 │   └── folium/                 # HTML visualization output
@@ -84,8 +85,8 @@ python main.py
 ```
 
 On first run, the simulator will:
-1. Download the London OSM street map (cached for subsequent runs)
-2. Fetch real LTE/NR towers in the area from OpenCellID
+1. Download the London OSM street map → cached to `maps/map.osm` (skipped on subsequent runs if bbox matches)
+2. Fetch real LTE/NR towers from OpenCellID → cached to `cache/towers.json` (skipped on subsequent runs if bbox matches)
 3. Generate vehicle traffic using SUMO
 4. Run the handover simulation
 5. Open an interactive map in your browser at `outputs/folium/simulation.html`

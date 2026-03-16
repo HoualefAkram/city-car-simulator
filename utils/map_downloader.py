@@ -2,6 +2,7 @@ import requests
 from pathlib import Path
 from data_models.latlng import LatLng
 from utils.osm_parser import OsmParser
+from utils.location_utils import LocationUtils
 import os
 from colorama import Fore, Style, init
 
@@ -9,10 +10,6 @@ init(autoreset=True)
 
 
 class MapDownloader:
-
-    @staticmethod
-    def __is_identical(val1: float, val2: float, tolerance: float = 0.000001) -> bool:
-        return abs(float(val1) - float(val2)) <= tolerance
 
     @staticmethod
     def download_osm_by_bbox(
@@ -30,10 +27,10 @@ class MapDownloader:
         if Path(output_file).exists():
             bounds = OsmParser.parse_bounds(output_file)
             if (
-                MapDownloader.__is_identical(min_lon, bounds["minlon"])
-                and MapDownloader.__is_identical(min_lat, bounds["minlat"])
-                and MapDownloader.__is_identical(max_lon, bounds["maxlon"])
-                and MapDownloader.__is_identical(max_lat, bounds["maxlat"])
+                LocationUtils.coords_are_identical(min_lon, bounds["minlon"])
+                and LocationUtils.coords_are_identical(min_lat, bounds["minlat"])
+                and LocationUtils.coords_are_identical(max_lon, bounds["maxlon"])
+                and LocationUtils.coords_are_identical(max_lat, bounds["maxlat"])
             ):
                 print(Fore.YELLOW + "Map already downloaded. Skipping...")
                 return None

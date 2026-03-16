@@ -5,6 +5,7 @@ __pycache__/
 
 outputs/
 maps/
+cache/
 
 # C extensions
 *.so

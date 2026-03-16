@@ -6,6 +6,10 @@ class LocationUtils:
     __earth_radius_meters = 6371000.0
 
     @staticmethod
+    def coords_are_identical(val1: float, val2: float, tolerance: float = 0.000001) -> bool:
+        return abs(float(val1) - float(val2)) <= tolerance
+
+    @staticmethod
     def haversine(pointA: LatLng, pointB: LatLng) -> float:
         """Distance between point A and point B. Result is in meters"""
 
