@@ -42,9 +42,10 @@ city-car-simulator/
 │   ├── location_utils.py       # Haversine distance, move_meters
 │   ├── path_gen.py             # SUMO traffic generation interface
 │   ├── map_downloader.py       # OSM map downloader (Overpass API)
+│   ├── osm_parser.py           # OSM file bounds parser
 │   ├── tower_downloader.py     # OpenCellID tower fetcher
 │   ├── render.py               # Folium map visualization
-│   └── trace_parser.py         # SUMO FCD XML parser
+│   └── fcd_parser.py           # SUMO FCD XML parser
 │
 ├── maps/                       # Cached OSM map files
 ├── outputs/
