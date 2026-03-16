@@ -1,9 +1,15 @@
 import requests
 from pathlib import Path
 from data_models.latlng import LatLng
+import xml.etree.ElementTree as ET
+import os
 
 
 class MapDownloader:
+
+    @staticmethod
+    def __is_identical(val1: float, val2: float, tolerance: float = 0.000001) -> bool:
+        return abs(float(val1) - float(val2)) <= tolerance
 
     @staticmethod
     def download_osm_by_bbox(
@@ -11,14 +17,35 @@ class MapDownloader:
         bottom_right: LatLng,
         output_file: str = "maps/map.osm",
     ) -> None:
-        if Path(output_file).exists():
-            print("Skipping download, file already exists")
-            return
         # left, bottom, right, top (min_lon, min_lat, max_lon, max_lat)
         min_lon = top_left.long
         min_lat = bottom_right.lat
         max_lon = bottom_right.long
         max_lat = top_left.lat
+
+        # check if the map already exists
+        if Path(output_file).exists():
+            tree = ET.parse(output_file)
+            root = tree.getroot()
+            bounds = root.find("bounds")
+            osm_minlon = bounds.get("minlon", False)
+            osm_minlat = bounds.get("minlat", False)
+            osm_maxlon = bounds.get("maxlon", False)
+            osm_maxlat = bounds.get("maxlat", False)
+            if (
+                MapDownloader.__is_identical(min_lon, osm_minlon)
+                and MapDownloader.__is_identical(min_lat, osm_minlat)
+                and MapDownloader.__is_identical(max_lon, osm_maxlon)
+                and MapDownloader.__is_identical(max_lat, osm_maxlat)
+            ):
+                print("Map already downloaded. Skipping...")
+                return None
+
+            print(
+                f"Removing old map. missmatch map:\n{min_lon}:{osm_minlon}\n{min_lat}:{osm_minlat}\n{max_lon}:{osm_maxlon}\n{max_lat}:{osm_maxlat}"
+            )
+            os.remove(output_file)
+
         Path(output_file).parent.mkdir(parents=True, exist_ok=True)
         url = f"https://overpass-api.de/api/map?bbox={min_lon},{min_lat},{max_lon},{max_lat}"
         print(f"Downloading OSM data from Overpass API to {output_file}...")
