@@ -1,7 +1,7 @@
 import requests
 from pathlib import Path
 from data_models.latlng import LatLng
-import xml.etree.ElementTree as ET
+from utils.osm_parser import OsmParser
 import os
 from colorama import Fore, Style, init
 
@@ -28,18 +28,12 @@ class MapDownloader:
 
         # check if the map already exists
         if Path(output_file).exists():
-            tree = ET.parse(output_file)
-            root = tree.getroot()
-            bounds = root.find("bounds")
-            osm_minlon = bounds.get("minlon", False)
-            osm_minlat = bounds.get("minlat", False)
-            osm_maxlon = bounds.get("maxlon", False)
-            osm_maxlat = bounds.get("maxlat", False)
+            bounds = OsmParser.parse_bounds(output_file)
             if (
-                MapDownloader.__is_identical(min_lon, osm_minlon)
-                and MapDownloader.__is_identical(min_lat, osm_minlat)
-                and MapDownloader.__is_identical(max_lon, osm_maxlon)
-                and MapDownloader.__is_identical(max_lat, osm_maxlat)
+                MapDownloader.__is_identical(min_lon, bounds["minlon"])
+                and MapDownloader.__is_identical(min_lat, bounds["minlat"])
+                and MapDownloader.__is_identical(max_lon, bounds["maxlon"])
+                and MapDownloader.__is_identical(max_lat, bounds["maxlat"])
             ):
                 print(Fore.YELLOW + "Map already downloaded. Skipping...")
                 return None

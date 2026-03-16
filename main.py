@@ -5,7 +5,7 @@ from utils.path_gen import PathGeneration
 from utils.map_downloader import MapDownloader
 from utils.tower_downloader import TowerDownloader
 from utils.render import Render
-from utils.trace_parser import TraceParser
+from utils.fcd_parser import FcdParser
 from colorama import Fore, Style, init
 import webbrowser
 from pathlib import Path
@@ -62,7 +62,7 @@ def run_simulation(
     path_gen.run()
 
     # 5. Parse Trace and Move Cars
-    timesteps: list[dict[int, LatLng]] = TraceParser.parse_fcd_trace()
+    timesteps: list[dict[int, LatLng]] = FcdParser.parse_fcd_trace()
 
     print(Fore.CYAN + Style.BRIGHT + "--- Simulating Movement and Network Logic ---")
     for timestep in timesteps:

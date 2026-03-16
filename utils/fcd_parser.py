@@ -3,7 +3,7 @@ from pathlib import Path
 from data_models.latlng import LatLng
 
 
-class TraceParser:
+class FcdParser:
 
     @staticmethod
     def parse_fcd_trace(
