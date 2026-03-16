@@ -1,36 +1,115 @@
-# 🚗 City Car Simulator — 5G Handover Simulation
+# City Car Simulator — 5G Handover Simulation
 
-A Python-based simulator that models a **User Equipment (UE)** — a car — moving through a city with multiple **Base Station Towers (BS)**. The simulator calculates real-time **RSRP** and **RSRQ** signal metrics using standard radio propagation models, laying the foundation for an **AI Reinforcement Learning agent** to optimize handover decisions.
+A Python-based simulator that models **User Equipment (UEs)** — cars — moving through a real city with real **Base Station Towers** fetched from OpenCellID. The simulator calculates real-time **RSRP** and **RSRQ** signal metrics using standard radio propagation models, implementing 3GPP A3 handover decision logic. Designed as a foundation for **AI / Reinforcement Learning** agents to optimize handover decisions in 5G networks.
 
 ---
 
-## 📡 What is Handover?
+## What is Handover?
 
 In mobile networks, as a car moves through a city, it constantly measures signal strength from nearby base stations. When a neighboring BS provides a stronger signal than the current serving BS, the network triggers a **handover** — switching the UE's connection to the better tower.
 
-This simulator models that process from first principles.
+This simulator models that process from first principles using real map data, real tower locations, and realistic vehicle movement.
 
 ---
 
-## 🗂️ Project Structure
+## Features
+
+- **Real city maps** — downloads street maps from OpenStreetMap via Overpass API
+- **Real tower data** — fetches live LTE/NR tower locations from OpenCellID
+- **Realistic vehicle movement** — uses SUMO (Simulation of Urban Mobility) to generate traffic on actual streets
+- **3GPP-compliant signal model** — log-distance path loss, RSRP, RSRQ, thermal noise
+- **3GPP A3 handover logic** — hysteresis-based handover decisions (3 dB margin)
+- **Multi-UE support** — simulate multiple cars simultaneously
+- **Interactive map output** — Folium HTML visualization, auto-opened in browser
+
+---
+
+## Project Structure
 
 ```
 city-car-simulator/
 │
-├── main.py               # Entry point — sets up BS, UE, runs simulation
-├── base_tower.py         # BaseTower class (BS)
-├── user_equipment.py     # UserEquipment class (UE / car)
-├── wave_utils.py         # RSRP, RSRQ, RSSI calculations
-├── location_utils.py     # Haversine distance, move_meters
-├── latlng.py             # LatLng coordinate dataclass
-└── ng_ran_report.py      # NGRANReport — measurement report from UE to BS
+├── main.py                     # Entry point — simulation orchestration
+│
+├── data_models/
+│   ├── user_equipment.py       # UE class (car / mobile device)
+│   ├── base_tower.py           # BaseTower class (cellular BS)
+│   ├── latlng.py               # LatLng coordinate dataclass
+│   └── ng_ran_report.py        # Signal measurement report (UE → BS)
+│
+├── utils/
+│   ├── wave_utils.py           # RSRP, RSRQ, RSSI calculations
+│   ├── location_utils.py       # Haversine distance, move_meters
+│   ├── path_gen.py             # SUMO traffic generation interface
+│   ├── map_downloader.py       # OSM map downloader (Overpass API)
+│   ├── tower_downloader.py     # OpenCellID tower fetcher
+│   ├── render.py               # Folium map visualization
+│   └── trace_parser.py         # SUMO FCD XML parser
+│
+├── maps/                       # Cached OSM map files
+├── outputs/
+│   ├── sumo/                   # SUMO network, routes, FCD traces
+│   └── folium/                 # HTML visualization output
+│
+└── .env                        # API keys (not committed)
 ```
 
 ---
 
-## ⚙️ Signal Model
+## Quick Start
 
-### Path Loss (Log-Distance Model)
+### 1. Prerequisites
+
+**Python dependencies:**
+```bash
+pip install numpy folium requests python-dotenv colorama
+```
+
+**SUMO (Simulation of Urban Mobility):**
+- Download and install from [sumo.dlr.de](https://sumo.dlr.de/)
+- Set the `SUMO_HOME` environment variable to your SUMO installation path
+
+**OpenCellID API key:**
+- Register at [opencellid.org](https://opencellid.org/) to get a free API key
+- Create a `.env` file in the project root:
+  ```
+  OPEN_CELL_ID_API_KEY="your_api_key_here"
+  ```
+
+### 2. Run
+
+```bash
+python main.py
+```
+
+On first run, the simulator will:
+1. Download the London OSM street map (cached for subsequent runs)
+2. Fetch real LTE/NR towers in the area from OpenCellID
+3. Generate vehicle traffic using SUMO
+4. Run the handover simulation
+5. Open an interactive map in your browser at `outputs/folium/simulation.html`
+
+---
+
+## Configuration
+
+All simulation parameters are in `main.py` → `run_simulation()`:
+
+| Parameter | Default | Description |
+|---|---|---|
+| `top_left` | `(51.511308, -0.157363)` | NW corner of simulation area (London) |
+| `bottom_right` | `(51.496028, -0.125348)` | SE corner of simulation area |
+| `num_ue` | `5` | Number of cars to simulate |
+| `seed` | `200` | Random seed for reproducible SUMO traffic |
+| `osm_download_path` | `"maps/map.osm"` | Cached OSM map location |
+| `show_folium_output` | `True` | Auto-open HTML output in browser |
+| `folium_output` | `"outputs/folium/simulation.html"` | Output map path |
+
+---
+
+## Signal Model
+
+### Path Loss (Log-Distance)
 
 ```
 PL(d) = PL(d0) + 10·n·log10(d/d0)
@@ -38,10 +117,10 @@ PL(d) = PL(d0) + 10·n·log10(d/d0)
 
 | Parameter | Value | Description |
 |---|---|---|
-| `d0` | 1m | Reference distance |
-| `n` (LOS) | 2.0 | Path loss exponent, clear line of sight |
-| `n` (NLOS) | 3.0 | Path loss exponent, urban obstructions |
-| LOS threshold | 20m | Distance under which LOS is assumed |
+| `d0` | 1 m | Reference distance |
+| `n` (LOS) | 2.0 | Path loss exponent — clear line of sight |
+| `n` (NLOS) | 3.0 | Path loss exponent — urban obstructions |
+| LOS threshold | 20 m | Distance under which LOS is assumed |
 
 ### RSRP
 
@@ -51,7 +130,7 @@ RSRP (dBm) = P_tx + G_tx + G_rx - PL(d)
 
 | Parameter | Value | Description |
 |---|---|---|
-| `P_tx` | 43 dBm | BS transmit power (20W, typical 5G macro) |
+| `P_tx` | 43 dBm | BS transmit power (20 W, typical 5G macro) |
 | `G_tx` | 15 dBi | BS sector antenna gain |
 | `G_rx` | 0 dBi | UE omnidirectional antenna gain |
 
@@ -61,10 +140,7 @@ RSRP (dBm) = P_tx + G_tx + G_rx - PL(d)
 RSRQ (dB) = 10·log10(N) + RSRP - RSSI
 ```
 
-| Parameter | Value | Description |
-|---|---|---|
-| `N` | 100 | Resource blocks (20 MHz bandwidth) |
-| `RSSI` | Σ all BS signals + noise | Total received power |
+Where `RSSI` = sum of signals from all detected BSs + thermal noise, and `N` = number of resource blocks.
 
 ### Thermal Noise Floor
 
@@ -74,131 +150,85 @@ noise (dBm) = -174 + 10·log10(bandwidth_hz) + noise_figure_db
 
 | Parameter | Value |
 |---|---|
-| Bandwidth | 100 MHz (5G sub-6GHz) |
+| Bandwidth | 100 MHz (5G sub-6 GHz) |
 | Noise figure | 7 dB (typical UE) |
 | Noise floor | ~-87 dBm |
 
 ---
 
-## 📶 Signal Quality Reference
+## Signal Quality Reference
 
 ### RSRP
 | Value | Quality |
 |---|---|
-| > -60 dBm | Excellent ✅ |
+| > -60 dBm | Excellent |
 | -60 to -80 dBm | Good |
 | -80 to -90 dBm | Medium |
 | -90 to -100 dBm | Poor |
-| < -100 dBm | Very bad ❌ |
+| < -100 dBm | Very bad |
 
 ### RSRQ
 | Value | Quality |
 |---|---|
-| > -3 dB | Excellent ✅ |
+| > -3 dB | Excellent |
 | -3 to -10 dB | Good |
 | -10 to -15 dB | Medium |
-| < -20 dB | Poor ❌ |
+| < -20 dB | Poor |
 
 ---
 
-## 🚀 Quick Start
+## Handover Logic
 
-### Installation
-
-```bash
-git clone https://github.com/your-username/city-car-simulator.git
-cd city-car-simulator
-pip install numpy folium
-```
-
-### Run
-
-```bash
-python3 main.py
-```
-
-### Example Output
+Implements the **3GPP A3 event**: a handover is triggered when:
 
 ```
-distance before move: 319.83m
-rsrp1: -60.48 dBm
-distance after move: 206.17m
-rsrp2: -54.76 dBm
+RSRP(neighbor) > RSRP(serving) + hysteresis
 ```
+
+- Default hysteresis: **3 dB**
+- Initial connection: UE automatically attaches to the strongest available tower
+- Decisions are evaluated at every simulation timestep
 
 ---
 
-## 🗺️ Visualization
-
-The simulator uses **Folium** to render an interactive HTML map showing BS towers, UE position, and travel path.
-
-```python
-plot_simulation(bs_list=[bs1, bs2, bs3], ue=car, ue_path=path)
-# opens simulation.html in browser
-```
-
----
-
-## 🏙️ BS & UE Configuration
-
-```python
-bs1 = BaseTower(
-    id=0,
-    latlng=LatLng(36.7538, 3.0588),  # Algiers, Algeria
-    p_tx=43.0,                        # dBm
-    frequency=3.5e9,                  # 5G sub-6GHz
-    bandwidth=100e6,                  # 100 MHz
-    g_tx=15.0,                        # dBi
-)
-
-car = UserEquipment(
-    id=0,
-    latlng=LatLng(36.7520, 3.0560),
-    g_rx=0.0,                         # dBi
-    serving_bs=bs1,
-)
-```
-
----
-
-## SUMO commands
-netconvert --osm-files home_map.osm --output-file home_map.net.xml</br>
-randomTrips.py -n home_map.net.xml -e 1000 -o home_trips.xml</br>
-duarouter -n home_map.net.xml --route-files home_trips.xml -o home.rou.xml --ignore-errors</br>
-
----
-
-## 🤖 Roadmap
+## Roadmap
 
 - [x] Log-distance path loss model
 - [x] RSRP calculation (per BS)
 - [x] RSRQ / RSSI calculation
-- [x] UE movement (haversine-based)
-- [x] Map visualization (Folium)
-- [x] A3 handover event trigger (hysteresis-based)
+- [x] UE movement via SUMO on real streets
+- [x] Real tower data from OpenCellID
+- [x] Real map data from OpenStreetMap
+- [x] Interactive map visualization (Folium)
+- [x] 3GPP A3 handover trigger (hysteresis-based)
 - [x] Multiple UEs
 - [ ] Performance metrics (ping-pong rate, handover failures)
-- [ ] Shadowing / slow fading (Long finger)
+- [ ] Shadowing / slow fading
+- [ ] RL agent for handover optimization
 
 ---
 
-## 📐 Dependencies
+## Dependencies
 
 | Library | Purpose |
 |---|---|
-| `numpy` | Math / signal calculations |
+| `numpy` | Signal calculations |
 | `folium` | Interactive map visualization |
+| `requests` | Overpass API + OpenCellID HTTP requests |
+| `python-dotenv` | Load API key from `.env` |
+| `colorama` | Colored terminal output |
+| SUMO | Traffic simulation engine |
 
 ---
 
-## 📚 References
+## References
 
-- 3GPP TR 38.901 — Study on channel model for frequencies from 0.5 to 100 GHz
+- 3GPP TR 38.901 — Channel model for frequencies from 0.5 to 100 GHz
 - 3GPP TS 36.214 — LTE physical layer measurements (RSRP, RSRQ definitions)
 - Rappaport, T.S. — *Wireless Communications: Principles and Practice*
 
 ---
 
-## 📄 License
+## License
 
 MIT License — free to use, modify, and distribute.
