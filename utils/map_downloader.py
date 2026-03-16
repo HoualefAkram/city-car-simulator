@@ -51,8 +51,8 @@ class MapDownloader:
                     file.write(chunk)
             print(Fore.GREEN + Style.BRIGHT + "Download complete!")
         else:
-            print(Fore.RED + Style.BRIGHT + "Download failed!")
-            raise ConnectionError(
-                f"Failed to download map. HTTP Status: {response.status_code}\n"
-                f"Response: {response.text}"
+            error_text: str = (
+                f"Failed to download map. HTTP Status: {response.status_code}\nResponse: {response.text}"
             )
+            print(Fore.RED + Style.BRIGHT + error_text)
+            raise Exception(error_text)
