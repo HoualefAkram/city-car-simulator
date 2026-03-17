@@ -40,3 +40,12 @@ class BaseTower:
 
     def remove_ue(self, ue_id: int):
         self.connected_ues = [ue for ue in self.connected_ues if ue.id != ue_id]
+
+    def __eq__(self, other):
+        if not isinstance(other, BaseTower):
+            return False
+
+        return self.id == other.id
+
+    def __hash__(self):
+        return hash(self.id)

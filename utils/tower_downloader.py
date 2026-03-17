@@ -61,11 +61,18 @@ class TowerDownloader:
 
         Path(_CACHE_FILE).parent.mkdir(parents=True, exist_ok=True)
         with open(_CACHE_FILE, "w") as f:
-            json.dump({"min_lat": min_lat, "min_lon": min_lon, "max_lat": max_lat, "max_lon": max_lon, "cells": cells}, f)
+            json.dump(
+                {
+                    "min_lat": min_lat,
+                    "min_lon": min_lon,
+                    "max_lat": max_lat,
+                    "max_lon": max_lon,
+                    "cells": cells,
+                },
+                f,
+            )
 
         towers = TowerDownloader.__parse_cells(cells)
-        print(Fore.GREEN + Style.BRIGHT + f"Fetched {len(towers)} LTE/NR BaseTowers")
-
         return towers
 
     @staticmethod
@@ -76,10 +83,17 @@ class TowerDownloader:
             if radio not in SUPPORTED_TOWERS:
                 continue
             tower = BaseTower(
-                id=cell["cellid"],
+                id=cell["cellid"] >> 8,
                 latlng=LatLng(cell["lat"], cell["lon"]),
                 radio=cell["radio"],
                 connected_ues=[],
             )
             towers.append(tower)
-        return towers
+
+        filtered = list(set(towers))
+        print(
+            Fore.GREEN
+            + Style.BRIGHT
+            + f"Got {len(towers)} LTE/NR Cells, {len(filtered)} BaseTowers"
+        )
+        return filtered
