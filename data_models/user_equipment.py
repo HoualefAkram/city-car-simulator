@@ -5,6 +5,7 @@ from data_models.base_tower import BaseTower
 from data_models.ng_ran_report import NGRANReport
 from utils.wave_utils import WaveUtils
 from colorama import Fore, init
+from math import ceil
 
 init(autoreset=True)
 
@@ -53,7 +54,7 @@ class UserEquipment:
             print(report)
 
         # Check for handover
-        target_bs = self.check_handover_3gpp_rsrp(report=report)
+        target_bs = self.check_handover_3gpp_rsrp()
         if target_bs:
             # Log handover decision, (or if the user connected for the first time)
             if self.serving_bs:
@@ -110,30 +111,53 @@ class UserEquipment:
 
     def check_handover_3gpp_rsrp(
         self,
-        report: NGRANReport,
         handover_threshold: float = 3.0,
         time_to_trigger: float = 3.0,
     ) -> Optional[BaseTower]:
         """Checks if a handover is needed based on 3GPP RSRP criteria."""
         # If serving bs is null, connect to the best available option
+        last_report: NGRANReport = self.generated_reports[-1]
         if self.serving_bs is None:
-            if not report.rsrp_values:
+            if not last_report.rsrp_values:
                 return None
-            best_bs_id = max(report.rsrp_values, key=report.rsrp_values.get)
+            best_bs_id = max(last_report.rsrp_values, key=last_report.rsrp_values.get)
             best_bs = next((bs for bs in self.all_bs if bs.id == best_bs_id), None)
             return best_bs
-        serving_rsrp = report.rsrp_values[self.serving_bs.id]
+        serving_rsrp = last_report.rsrp_values[self.serving_bs.id]
 
         best_bs_id = max(
-            (bs_id for bs_id in report.rsrp_values if bs_id != self.serving_bs.id),
-            key=report.rsrp_values.get,
+            (bs_id for bs_id in last_report.rsrp_values if bs_id != self.serving_bs.id),
+            key=last_report.rsrp_values.get,
             default=None,
         )
         if best_bs_id is None:
             return None
-        if report.rsrp_values[best_bs_id] > serving_rsrp + handover_threshold:
+        # Consider checking report history for TTT only if the HOM is satisfied
+        if last_report.rsrp_values[best_bs_id] > serving_rsrp + handover_threshold:
             # check older reports if TTT is satisfied
-            return next((bs for bs in self.all_bs if bs.id == best_bs_id), None)
+            if len(self.generated_reports) > 1:
+                # check how many reports are needed to satisfy the TTT
+                delta_timestep = (
+                    last_report.timestep - self.generated_reports[-2].timestep
+                )
+                if delta_timestep <= 0:  # Safety
+                    return None
+                needed_reports = ceil(time_to_trigger / delta_timestep)
+                if len(self.generated_reports) >= needed_reports:
+                    report_history = self.generated_reports[
+                        -1 : -1 - needed_reports : -1
+                    ]
+                    is_satisfied = True
+                    for report in report_history:
+                        serving = report.rsrp_values[self.serving_bs.id]
+                        candidate = report.rsrp_values[best_bs_id]
+                        if candidate <= serving + handover_threshold:
+                            is_satisfied = False
+                            break
+                    if is_satisfied:
+                        return next(
+                            (bs for bs in self.all_bs if bs.id == best_bs_id), None
+                        )
         return None
 
     def handover(self, target_bs: BaseTower):
