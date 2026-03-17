@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from data_models.car_fcd_data import CarFcdData
 from data_models.latlng import LatLng
 
 
@@ -8,7 +9,7 @@ class FcdParser:
     @staticmethod
     def parse_fcd_trace(
         trace_file: str = "outputs/sumo/trace.xml",
-    ) -> list[dict[int, LatLng]]:
+    ) -> list[int, CarFcdData]:
         if not Path(trace_file).exists():
             raise FileNotFoundError(f"Trace file not found: {trace_file}")
 
@@ -22,7 +23,11 @@ class FcdParser:
                 veh_id = int(vehicle.get("id"))
                 lon = float(vehicle.get("x"))
                 lat = float(vehicle.get("y"))
-                snapshot[veh_id] = LatLng(lat, lon)
+                snapshot[veh_id] = CarFcdData(
+                    id=veh_id,
+                    latlng=LatLng(lat, lon),
+                    timestep=timestep,
+                )
             timesteps.append(snapshot)
 
         return timesteps

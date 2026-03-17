@@ -3,12 +3,14 @@ class NGRANReport:
     def __init__(
         self,
         ue_id: int,
+        timestep: float,
         rsrp_values: dict,
         rsrq_values: dict,
     ):
         self.ue_id: int = ue_id
         self.rsrp_values: dict = rsrp_values
         self.rsrq_values: dict = rsrq_values
+        self.timestep = timestep
 
     def __repr__(self):
         return f"NGRANReport(ue_id: {self.ue_id}, rsrp_values: {self.rsrp_values}, rsrq_values: {self.rsrq_values})"

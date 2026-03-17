@@ -1,3 +1,4 @@
+from data_models.car_fcd_data import CarFcdData
 from data_models.user_equipment import UserEquipment
 from data_models.base_tower import BaseTower
 from data_models.latlng import LatLng
@@ -62,14 +63,14 @@ def run_simulation(
     path_gen.run()
 
     # 5. Parse Trace and Move Cars
-    timesteps: list[dict[int, LatLng]] = FcdParser.parse_fcd_trace()
+    fcd_data: list[dict[int, CarFcdData]] = FcdParser.parse_fcd_trace()
 
     print(Fore.CYAN + Style.BRIGHT + "--- Simulating Movement and Network Logic ---")
-    for timestep in timesteps:
-        for car_id, location in timestep.items():
+    for fcd in fcd_data:
+        for car_id, car_data in fcd.items():
             if car_id in cars:  # Safe check in case SUMO spawned extra vehicles
                 car = cars[car_id]
-                car.move_to(location)
+                car.move_to(car_data.latlng, timestep=car_data.timestep)
 
     # 6. Render Final Map
     print(Fore.CYAN + Style.BRIGHT + "--- Rendering Final Output ---")

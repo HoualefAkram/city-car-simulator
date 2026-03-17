@@ -4,7 +4,7 @@ from utils.location_utils import LocationUtils
 from data_models.base_tower import BaseTower
 from data_models.ng_ran_report import NGRANReport
 from utils.wave_utils import WaveUtils
-from colorama import Fore, Style, init
+from colorama import Fore, init
 
 init(autoreset=True)
 
@@ -44,9 +44,9 @@ class UserEquipment:
     def __append_generated_reports(self, report: NGRANReport):
         self.generated_reports.append(report)
 
-    def __on_movement(self):
+    def __on_movement(self, timestep):
         self.__append_path_history()
-        report = self.generate_report(all_bs=self.all_bs)
+        report = self.generate_report(all_bs=self.all_bs, timestep=timestep)
         self.__append_generated_reports(report)
         # Logs
         if self.print_report_on_movement:
@@ -65,24 +65,24 @@ class UserEquipment:
                 print(Fore.MAGENTA + f"UE {self.id} connecting to BS {target_bs.id}")
             self.handover(target_bs=target_bs)
 
-    def move_deg(self, lat_offset: float, long_offset: float):
+    def move_deg(self, lat_offset: float, long_offset: float, timestep: float):
         new_latitude = self.latlng.lat + lat_offset
         new_longitude = self.latlng.long + long_offset
         self.latlng = LatLng(lat=new_latitude, long=new_longitude)
-        self.__on_movement()
+        self.__on_movement(timestep=timestep)
 
-    def move_meters(self, distance: float, angle: float = 0.0):
+    def move_meters(self, distance: float, timestep: float, angle: float = 0.0):
         new_point: LatLng = LocationUtils.move_meters(
             point=self.latlng, distance=distance, angle=angle
         )
         self.latlng = new_point
-        self.__on_movement()
+        self.__on_movement(timestep=timestep)
 
-    def move_to(self, latlng: LatLng):
+    def move_to(self, latlng: LatLng, timestep):
         self.latlng = latlng
-        self.__on_movement()
+        self.__on_movement(timestep=timestep)
 
-    def generate_report(self, all_bs: list[BaseTower]) -> NGRANReport:
+    def generate_report(self, all_bs: list[BaseTower], timestep: float) -> NGRANReport:
         rsrp_values = {}
         rsrq_values = {}
 
@@ -105,10 +105,14 @@ class UserEquipment:
             ue_id=self.id,
             rsrp_values=rsrp_values,
             rsrq_values=rsrq_values,
+            timestep=timestep,
         )
 
     def check_handover_3gpp_rsrp(
-        self, report: NGRANReport, handover_threshold: float = 3.0
+        self,
+        report: NGRANReport,
+        handover_threshold: float = 3.0,
+        time_to_trigger: float = 3.0,
     ) -> Optional[BaseTower]:
         """Checks if a handover is needed based on 3GPP RSRP criteria."""
         # If serving bs is null, connect to the best available option
@@ -128,6 +132,7 @@ class UserEquipment:
         if best_bs_id is None:
             return None
         if report.rsrp_values[best_bs_id] > serving_rsrp + handover_threshold:
+            # check older reports if TTT is satisfied
             return next((bs for bs in self.all_bs if bs.id == best_bs_id), None)
         return None
 
