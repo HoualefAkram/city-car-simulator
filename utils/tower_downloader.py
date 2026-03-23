@@ -42,7 +42,9 @@ class TowerDownloader:
                 return TowerDownloader.__parse_cells(cached["cells"])
 
         csv_path = TowerDownloader.__ensure_csv(mcc)
-        cells = TowerDownloader.__filter_csv(csv_path, min_lat, min_lon, max_lat, max_lon)
+        cells = TowerDownloader.__filter_csv(
+            csv_path, min_lat, min_lon, max_lat, max_lon
+        )
 
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
         with open(_TOWERS_CACHE, "w") as f:
@@ -64,7 +66,10 @@ class TowerDownloader:
         csv_path = _CACHE_DIR / f"cell_towers_{mcc}.csv.gz"
 
         if csv_path.exists():
-            print(Fore.YELLOW + f"CSV database already downloaded at {csv_path}. Skipping...")
+            print(
+                Fore.YELLOW
+                + f"CSV database already downloaded at {csv_path}. Skipping..."
+            )
             return csv_path
 
         load_dotenv()
@@ -112,9 +117,20 @@ class TowerDownloader:
         cells = []
 
         fieldnames = [
-            "radio", "mcc", "net", "area", "cell", "unit",
-            "lon", "lat", "range", "samples", "changeable",
-            "created", "updated", "averageSignal",
+            "radio",
+            "mcc",
+            "net",
+            "area",
+            "cell",
+            "unit",
+            "lon",
+            "lat",
+            "range",
+            "samples",
+            "changeable",
+            "created",
+            "updated",
+            "averageSignal",
         ]
 
         with gzip.open(csv_path, "rt") as f:
@@ -143,7 +159,7 @@ class TowerDownloader:
         towers: list[BaseTower] = []
         for cell in cells:
             tower = BaseTower(
-                id=cell["cellid"],
+                id=cell["cellid"] >> 8,
                 latlng=LatLng(cell["lat"], cell["lon"]),
                 radio=cell["radio"],
                 connected_ues=[],
