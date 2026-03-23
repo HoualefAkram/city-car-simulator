@@ -18,6 +18,7 @@ init(autoreset=True)
 def run_simulation(
     top_left: LatLng,
     bottom_right: LatLng,
+    mcc: int,
     num_ue: int,
     seed: int = 42,
     osm_download_path: str = "maps/map.osm",
@@ -42,6 +43,7 @@ def run_simulation(
     bs_list: list[BaseTower] = TowerDownloader.get_towers_in_bbox(
         top_left=top_left,
         bottom_right=bottom_right,
+        mcc=mcc,
     )
 
     if not bs_list:
@@ -114,6 +116,7 @@ if __name__ == "__main__":
     # --- Configuration Parameters ---
     MAP_TOP_LEFT = LatLng(51.511308, -0.157363)
     MAP_BOTTOM_RIGHT = LatLng(51.496028, -0.125348)
+    MCC = 234
     NUMBER_OF_UE = 1
     SEED = 200
 
@@ -121,6 +124,7 @@ if __name__ == "__main__":
     run_simulation(
         top_left=MAP_TOP_LEFT,
         bottom_right=MAP_BOTTOM_RIGHT,
+        mcc=MCC,
         num_ue=NUMBER_OF_UE,
         seed=SEED,
     )

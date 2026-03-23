@@ -22,7 +22,7 @@ class TowerDownloader:
 
     @staticmethod
     def get_towers_in_bbox(
-        top_left: LatLng, bottom_right: LatLng, mcc: int = 234
+        top_left: LatLng, bottom_right: LatLng, mcc: int
     ) -> list[BaseTower]:
         min_lat = bottom_right.lat
         min_lon = top_left.long
