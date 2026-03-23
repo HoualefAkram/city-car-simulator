@@ -10,6 +10,7 @@ from utils.fcd_parser import FcdParser
 from colorama import Fore, Style, init
 import webbrowser
 from pathlib import Path
+from utils.logger import Logger
 
 init(autoreset=True)
 
@@ -23,6 +24,9 @@ def run_simulation(
     show_folium_output: bool = True,
     folium_output: str = "outputs/folium/simulation.html",
 ) -> None:
+
+    logger = Logger()
+
     """Runs the complete city car simulator pipeline."""
 
     print(Fore.CYAN + Style.BRIGHT + f"--- Starting Simulation for {num_ue} UEs ---")
@@ -70,7 +74,21 @@ def run_simulation(
         for car_id, car_data in fcd.items():
             if car_id in cars:  # Safe check in case SUMO spawned extra vehicles
                 car = cars[car_id]
-                car.move_to(car_data.latlng, timestep=car_data.timestep)
+                report = car.move_to(car_data.latlng, timestep=car_data.timestep)
+                rsrp = report.rsrp_values[car.serving_bs.id]
+                rsrq = report.rsrq_values[car.serving_bs.id]
+                logger.log_ue_metric(
+                    ue_index=car.id,
+                    metric=Logger.Metric.RSRP,
+                    step=car_data.timestep,
+                    value=rsrp,
+                )
+                logger.log_ue_metric(
+                    ue_index=car.id,
+                    metric=Logger.Metric.RSRQ,
+                    step=car_data.timestep,
+                    value=rsrq,
+                )
 
     # 6. Render Final Map
     print(Fore.CYAN + Style.BRIGHT + "--- Rendering Final Output ---")
@@ -96,7 +114,7 @@ if __name__ == "__main__":
     # --- Configuration Parameters ---
     MAP_TOP_LEFT = LatLng(51.511308, -0.157363)
     MAP_BOTTOM_RIGHT = LatLng(51.496028, -0.125348)
-    NUMBER_OF_UE = 5
+    NUMBER_OF_UE = 1
     SEED = 200
 
     # Execute the pipeline

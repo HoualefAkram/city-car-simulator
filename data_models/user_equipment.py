@@ -61,11 +61,14 @@ class UserEquipment:
             if self.serving_bs:
                 print(
                     Fore.RED
-                    + f"{self.id} handover from BS {self.serving_bs.id} to BS {target_bs.id}"
+                    + f"{self.id} handover from BS {self.serving_bs.id} to BS {target_bs.id} at {timestep}"
                 )
                 self.total_handovers += 1
             else:
-                print(Fore.MAGENTA + f"UE {self.id} connecting to BS {target_bs.id}")
+                print(
+                    Fore.MAGENTA
+                    + f"UE {self.id} connecting to BS {target_bs.id} at {timestep}"
+                )
             self.handover(target_bs=target_bs)
         return report
 
