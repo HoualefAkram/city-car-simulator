@@ -77,7 +77,7 @@ for fcd in fcd_data:
                 value=rsrq,
             )
 
-# 6. Render Final Map
+# Render Final Map
 print(Fore.CYAN + Style.BRIGHT + "--- Rendering Final Output ---")
 Render.render_map(bs_list=bs_list, ue_list=list(cars.values()))
 
