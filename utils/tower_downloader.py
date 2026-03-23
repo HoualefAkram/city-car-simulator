@@ -1,31 +1,36 @@
+import csv
+import gzip
 import json
+import os
 import requests
 from pathlib import Path
 from data_models.latlng import LatLng
 from data_models.base_tower import BaseTower
 from utils.location_utils import LocationUtils
-import os
 from dotenv import load_dotenv
 from colorama import Fore, Style, init
 
 init(autoreset=True)
 
 SUPPORTED_TOWERS = {"LTE", "NR"}
-_CACHE_FILE = "cache/towers.json"
+_CACHE_DIR = Path("cache")
+_TOWERS_CACHE = _CACHE_DIR / "towers.json"
 
 
 class TowerDownloader:
-    __OPEN_CELL_ID_BASE_URL = "https://opencellid.org"
+    __DOWNLOAD_URL = "https://opencellid.org/ocid/downloads"
 
     @staticmethod
-    def get_towers_in_bbox(top_left: LatLng, bottom_right: LatLng) -> list[BaseTower]:
+    def get_towers_in_bbox(
+        top_left: LatLng, bottom_right: LatLng, mcc: int = 234
+    ) -> list[BaseTower]:
         min_lat = bottom_right.lat
         min_lon = top_left.long
         max_lat = top_left.lat
         max_lon = bottom_right.long
 
-        if Path(_CACHE_FILE).exists():
-            with open(_CACHE_FILE, "r") as f:
+        if _TOWERS_CACHE.exists():
+            with open(_TOWERS_CACHE, "r") as f:
                 cached = json.load(f)
             if (
                 LocationUtils.coords_are_identical(min_lat, cached["min_lat"])
@@ -36,31 +41,11 @@ class TowerDownloader:
                 print(Fore.YELLOW + "Towers already fetched. Skipping...")
                 return TowerDownloader.__parse_cells(cached["cells"])
 
-        load_dotenv()
-        OPENCELLID_KEY = os.getenv("OPEN_CELL_ID_API_KEY")
+        csv_path = TowerDownloader.__ensure_csv(mcc)
+        cells = TowerDownloader.__filter_csv(csv_path, min_lat, min_lon, max_lat, max_lon)
 
-        print(Fore.CYAN + "--- Fetching Base Towers from OpenCellID ---")
-
-        response = requests.get(
-            f"{TowerDownloader.__OPEN_CELL_ID_BASE_URL}/cell/getInArea",
-            params={
-                "key": OPENCELLID_KEY,
-                "BBOX": f"{min_lat},{min_lon},{max_lat},{max_lon}",
-                "format": "json",
-            },
-        )
-
-        response.raise_for_status()
-        data = response.json()
-        if data.get("error", False):
-            error_text = f"Failed to get Base Towers. status_code: {response.status_code}, error: {data.get("error", None)},code: {data.get("code", None)}"
-            print(Fore.RED + error_text)
-            raise Exception(error_text)
-
-        cells = data.get("cells", [])
-
-        Path(_CACHE_FILE).parent.mkdir(parents=True, exist_ok=True)
-        with open(_CACHE_FILE, "w") as f:
+        _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        with open(_TOWERS_CACHE, "w") as f:
             json.dump(
                 {
                     "min_lat": min_lat,
@@ -72,18 +57,93 @@ class TowerDownloader:
                 f,
             )
 
-        towers = TowerDownloader.__parse_cells(cells)
-        return towers
+        return TowerDownloader.__parse_cells(cells)
+
+    @staticmethod
+    def __ensure_csv(mcc: int = 234) -> Path:
+        csv_path = _CACHE_DIR / f"cell_towers_{mcc}.csv.gz"
+
+        if csv_path.exists():
+            print(Fore.YELLOW + f"CSV database already downloaded at {csv_path}. Skipping...")
+            return csv_path
+
+        load_dotenv()
+        key = os.getenv("OPEN_CELL_ID_API_KEY")
+
+        params = {"token": key, "type": "mcc", "file": f"{mcc}.csv.gz"}
+
+        print(Fore.CYAN + f"--- Downloading OpenCellID CSV (MCC {mcc}) ---")
+
+        response = requests.get(
+            TowerDownloader.__DOWNLOAD_URL, params=params, stream=True
+        )
+        response.raise_for_status()
+
+        content_type = response.headers.get("content-type", "")
+        if "json" in content_type or "text" in content_type:
+            body = response.text
+            raise Exception(f"OpenCellID download failed: {body}")
+
+        _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+        total = int(response.headers.get("content-length", 0))
+        downloaded = 0
+        with open(csv_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+                downloaded += len(chunk)
+                if total:
+                    pct = downloaded * 100 // total
+                    print(f"\r{Fore.CYAN}Downloading: {pct}%", end="", flush=True)
+
+        size_mb = csv_path.stat().st_size / (1024 * 1024)
+        print(f"\n{Fore.GREEN}Download complete: {csv_path} ({size_mb:.1f} MB)")
+        return csv_path
+
+    @staticmethod
+    def __filter_csv(
+        csv_path: Path,
+        min_lat: float,
+        min_lon: float,
+        max_lat: float,
+        max_lon: float,
+    ) -> list[dict]:
+        print(Fore.CYAN + "--- Filtering towers from local CSV database ---")
+        cells = []
+
+        fieldnames = [
+            "radio", "mcc", "net", "area", "cell", "unit",
+            "lon", "lat", "range", "samples", "changeable",
+            "created", "updated", "averageSignal",
+        ]
+
+        with gzip.open(csv_path, "rt") as f:
+            reader = csv.DictReader(f, fieldnames=fieldnames)
+            for row in reader:
+                radio = row["radio"]
+                if radio not in SUPPORTED_TOWERS:
+                    continue
+                lat = float(row["lat"])
+                lon = float(row["lon"])
+                if min_lat <= lat <= max_lat and min_lon <= lon <= max_lon:
+                    cells.append(
+                        {
+                            "cellid": int(row["cell"]),
+                            "lat": lat,
+                            "lon": lon,
+                            "radio": radio,
+                        }
+                    )
+
+        print(Fore.GREEN + f"Found {len(cells)} LTE/NR cells in bounding box")
+        return cells
 
     @staticmethod
     def __parse_cells(cells: list[dict]) -> list[BaseTower]:
         towers: list[BaseTower] = []
         for cell in cells:
-            radio = cell["radio"]
-            if radio not in SUPPORTED_TOWERS:
-                continue
             tower = BaseTower(
-                id=cell["cellid"] >> 8,
+                id=cell["cellid"],
                 latlng=LatLng(cell["lat"], cell["lon"]),
                 radio=cell["radio"],
                 connected_ues=[],
