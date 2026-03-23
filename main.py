@@ -114,8 +114,8 @@ def run_simulation(
 
 if __name__ == "__main__":
     # --- Configuration Parameters ---
-    MAP_TOP_LEFT = LatLng(51.788120, -1.280547)
-    MAP_BOTTOM_RIGHT = LatLng(51.747433, -1.253940)
+    MAP_TOP_LEFT = LatLng(51.522004, -0.157535)
+    MAP_BOTTOM_RIGHT = LatLng(51.512737, -0.134189)
     MCC = 234
     NUMBER_OF_UE = 1
     SEED = 200

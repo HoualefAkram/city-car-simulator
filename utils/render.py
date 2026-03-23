@@ -27,11 +27,12 @@ class Render:
 
         # Base Towers
         for bs in bs_list:
+            icon_color = "black" if bs.radio == "LTE" else "red"
             folium.Marker(
                 location=[bs.latlng.lat, bs.latlng.long],
                 tooltip=f"BS {bs.id}",
-                popup=f"BS{bs.id} | {bs.frequency/1e9:.1f}GHz | {bs.p_tx}dBm",
-                icon=folium.Icon(color="black", icon="tower-cell", prefix="fa"),
+                popup=f"BS{bs.id}\n{bs.radio}\n{bs.frequency/1e9:.1f}GHz\n{bs.p_tx}dBm",
+                icon=folium.Icon(color=icon_color, icon="tower-cell", prefix="fa"),
             ).add_to(m)
 
         for i, ue in enumerate(ue_list):
