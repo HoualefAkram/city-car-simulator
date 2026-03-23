@@ -18,9 +18,11 @@ This simulator models that process from first principles using real map data, re
 - **Real tower data** — fetches live LTE/NR tower locations from OpenCellID, cached locally to avoid redundant API calls
 - **Realistic vehicle movement** — uses SUMO (Simulation of Urban Mobility) to generate traffic on actual streets
 - **3GPP-compliant signal model** — log-distance path loss, RSRP, RSRQ, thermal noise
-- **3GPP A3 handover logic** — hysteresis-based handover decisions (3 dB margin)
+- **3GPP A3 handover logic** — hysteresis-based handover decisions (3 dB margin) with Time-to-Trigger (TTT)
 - **Multi-UE support** — simulate multiple cars simultaneously
 - **Interactive map output** — Folium HTML visualization, auto-opened in browser
+- **TensorBoard logging** — per-UE RSRP/RSRQ metrics tracked over time, with auto-launch support
+- **RL foundation** — Gymnasium environment and DDQN agent scaffolding for handover optimization
 
 ---
 
@@ -29,13 +31,21 @@ This simulator models that process from first principles using real map data, re
 ```
 city-car-simulator/
 │
-├── main.py                     # Entry point — simulation orchestration
+├── prepare.py                  # Data preparation — downloads maps, towers, generates SUMO traffic
+├── test.py                     # Main simulation — runs handover sim, logs metrics, renders map
+├── train.py                    # RL training entry point (placeholder)
 │
 ├── data_models/
-│   ├── user_equipment.py       # UE class (car / mobile device)
+│   ├── user_equipment.py       # UE class (car / mobile device) with handover logic
 │   ├── base_tower.py           # BaseTower class (cellular BS)
 │   ├── latlng.py               # LatLng coordinate dataclass
-│   └── ng_ran_report.py        # Signal measurement report (UE → BS)
+│   ├── ng_ran_report.py        # Signal measurement report (UE → BS)
+│   ├── car_fcd_data.py         # SUMO FCD trace data per vehicle
+│   └── handover_algorithm.py   # Enum: A3_RSRP_3GPP, DDQN_CHO
+│
+├── rl/
+│   ├── handover_env.py         # Gymnasium environment for handover decisions
+│   └── ddqn_agent.py           # Double DQN agent with experience replay
 │
 ├── utils/
 │   ├── wave_utils.py           # RSRP, RSRQ, RSSI calculations
@@ -45,13 +55,17 @@ city-car-simulator/
 │   ├── osm_parser.py           # OSM file bounds parser
 │   ├── tower_downloader.py     # OpenCellID tower fetcher with bbox cache
 │   ├── render.py               # Folium map visualization
-│   └── fcd_parser.py           # SUMO FCD XML parser
+│   ├── fcd_parser.py           # SUMO FCD XML parser
+│   └── logger.py               # TensorBoard logging (per-UE and global metrics)
 │
-├── maps/                       # Cached OSM map files (git-ignored)
-├── cache/                      # Cached API responses (git-ignored)
+├── cache/
+│   ├── maps/                   # Cached OSM map files
+│   └── towers/                 # Cached tower JSON data
+│
 ├── outputs/
 │   ├── sumo/                   # SUMO network, routes, FCD traces
-│   └── folium/                 # HTML visualization output
+│   ├── folium/                 # HTML visualization output
+│   └── runs/                   # TensorBoard log directories (timestamped)
 │
 └── .env                        # API keys (not committed)
 ```
@@ -64,7 +78,7 @@ city-car-simulator/
 
 **Python dependencies:**
 ```bash
-pip install numpy folium requests python-dotenv colorama
+pip install numpy folium requests python-dotenv colorama torch gymnasium tensorboard
 ```
 
 **SUMO (Simulation of Urban Mobility):**
@@ -78,34 +92,45 @@ pip install numpy folium requests python-dotenv colorama
   OPEN_CELL_ID_API_KEY="your_api_key_here"
   ```
 
-### 2. Run
+### 2. Prepare Data
 
 ```bash
-python main.py
+python prepare.py
 ```
 
-On first run, the simulator will:
-1. Download the London OSM street map → cached to `maps/map.osm` (skipped on subsequent runs if bbox matches)
-2. Fetch real LTE/NR towers from OpenCellID → cached to `cache/towers.json` (skipped on subsequent runs if bbox matches)
-3. Generate vehicle traffic using SUMO
-4. Run the handover simulation
-5. Open an interactive map in your browser at `outputs/folium/simulation.html`
+This will:
+1. Download the London OSM street map → cached to `cache/maps/` (skipped if bbox matches)
+2. Fetch real LTE/NR towers from OpenCellID → cached to `cache/towers/` (skipped if bbox matches)
+3. Generate vehicle traffic using SUMO (netconvert → randomTrips → duarouter → simulation)
+
+### 3. Run Simulation
+
+```bash
+python test.py
+```
+
+This will:
+1. Load base stations from cached tower data
+2. Parse SUMO FCD traces for vehicle positions
+3. Run the handover simulation with 3GPP A3 logic
+4. Log per-UE RSRP/RSRQ metrics to TensorBoard
+5. Render an interactive map to `outputs/folium/simulation.html`
+6. Auto-launch TensorBoard for metric visualization
 
 ---
 
 ## Configuration
 
-All simulation parameters are in `main.py` → `run_simulation()`:
+Simulation parameters are configured in `prepare.py` and `test.py`:
 
 | Parameter | Default | Description |
 |---|---|---|
 | `top_left` | `(51.511308, -0.157363)` | NW corner of simulation area (London) |
 | `bottom_right` | `(51.496028, -0.125348)` | SE corner of simulation area |
-| `num_ue` | `5` | Number of cars to simulate |
+| `num_ue` | Parsed from FCD data | Number of cars to simulate |
 | `seed` | `200` | Random seed for reproducible SUMO traffic |
-| `osm_download_path` | `"maps/map.osm"` | Cached OSM map location |
-| `show_folium_output` | `True` | Auto-open HTML output in browser |
-| `folium_output` | `"outputs/folium/simulation.html"` | Output map path |
+| `SHOW_FOLIUM_OUTPUT` | `True` | Auto-open HTML output in browser |
+| `SHOW_TENSORBOARD_OUTPUT` | `True` | Auto-launch TensorBoard |
 
 ---
 
@@ -188,8 +213,28 @@ RSRP(neighbor) > RSRP(serving) + hysteresis
 ```
 
 - Default hysteresis: **3 dB**
+- Time-to-Trigger (TTT): **3 seconds** — condition must hold for the last 3 seconds of reports
 - Initial connection: UE automatically attaches to the strongest available tower
 - Decisions are evaluated at every simulation timestep
+
+### Handover Algorithms
+
+| Algorithm | Status | Description |
+|---|---|---|
+| `A3_RSRP_3GPP` | Implemented | Standard 3GPP A3 event with hysteresis and TTT |
+| `DDQN_CHO` | Planned | Deep Double Q-Network for learned handover optimization |
+
+---
+
+## Reinforcement Learning
+
+The project includes scaffolding for RL-based handover optimization:
+
+- **Gymnasium Environment** (`rl/handover_env.py`) — action space: choose 1 of 4 base stations; observation space: 8 RSRP/RSRQ values + 4 one-hot current action
+- **DDQN Agent** (`rl/ddqn_agent.py`) — Double DQN with experience replay, epsilon-greedy exploration, and target network hard updates
+- **TensorBoard Logger** (`utils/logger.py`) — tracks per-UE signal metrics, episode reward, loss, and epsilon over training
+
+The RL environment and training loop (`train.py`) are under active development.
 
 ---
 
@@ -202,8 +247,13 @@ RSRP(neighbor) > RSRP(serving) + hysteresis
 - [x] Real tower data from OpenCellID
 - [x] Real map data from OpenStreetMap
 - [x] Interactive map visualization (Folium)
-- [x] 3GPP A3 handover trigger (hysteresis-based)
+- [x] 3GPP A3 handover trigger (hysteresis + TTT)
 - [x] Multiple UEs
+- [x] TensorBoard metric logging
+- [x] Separated data preparation and simulation scripts
+- [x] DDQN agent scaffolding
+- [ ] Integrate DDQN agent with handover environment
+- [ ] RL training loop
 - [ ] Performance metrics (ping-pong rate, handover failures)
 - [ ] Shadowing / slow fading
 - [ ] RL agent for handover optimization
@@ -219,7 +269,10 @@ RSRP(neighbor) > RSRP(serving) + hysteresis
 | `requests` | Overpass API + OpenCellID HTTP requests |
 | `python-dotenv` | Load API key from `.env` |
 | `colorama` | Colored terminal output |
-| SUMO | Traffic simulation engine |
+| `torch` | DDQN neural network (PyTorch) |
+| `gymnasium` | RL environment interface |
+| `tensorboard` | Training and signal metric visualization |
+| SUMO | Traffic simulation engine (external) |
 
 ---
 
