@@ -46,7 +46,7 @@ class UserEquipment:
     def __append_generated_reports(self, report: NGRANReport):
         self.generated_reports.append(report)
 
-    def __on_movement(self, timestep):
+    def __on_movement(self, timestep) -> NGRANReport:
         self.__append_path_history()
         report = self.generate_report(all_bs=self.all_bs, timestep=timestep)
         self.__append_generated_reports(report)
@@ -67,6 +67,7 @@ class UserEquipment:
             else:
                 print(Fore.MAGENTA + f"UE {self.id} connecting to BS {target_bs.id}")
             self.handover(target_bs=target_bs)
+        return report
 
     def move_deg(self, lat_offset: float, long_offset: float, timestep: float):
         new_latitude = self.latlng.lat + lat_offset
@@ -81,9 +82,9 @@ class UserEquipment:
         self.latlng = new_point
         self.__on_movement(timestep=timestep)
 
-    def move_to(self, latlng: LatLng, timestep):
+    def move_to(self, latlng: LatLng, timestep) -> NGRANReport:
         self.latlng = latlng
-        self.__on_movement(timestep=timestep)
+        return self.__on_movement(timestep=timestep)
 
     def generate_report(self, all_bs: list[BaseTower], timestep: float) -> NGRANReport:
         rsrp_values = {}
