@@ -34,6 +34,15 @@ class FcdParser:
         return timesteps
 
     @staticmethod
+    def last_timestep(trace_file: str = "outputs/sumo/trace.xml") -> float:
+        if not Path(trace_file).exists():
+            raise FileNotFoundError(f"Trace file not found: {trace_file}")
+        tree = ET.parse(trace_file)
+        root = tree.getroot()
+        last_timestep = root.findall("timestep")[-1]
+        return float(last_timestep.get("time"))
+
+    @staticmethod
     def count_vehicles(
         trace_file: str = "outputs/sumo/trace.xml",
     ) -> int:

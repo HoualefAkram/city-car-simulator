@@ -77,21 +77,63 @@ for fcd in fcd_data:
                 step=car_data.timestep,
                 value=rsrq,
             )
+            logger.log_ue_metric(
+                ue_index=car.id,
+                metric=Logger.Metric.TOTAL_HANDOVERS,
+                step=car_data.timestep,
+                value=car.get_total_handovers(),
+            )
+            logger.log_ue_metric(
+                ue_index=car.id,
+                metric=Logger.Metric.TOTAL_PINGPONG,
+                step=car_data.timestep,
+                value=car.get_total_pingpong(),
+            )
+            logger.log_ue_metric(
+                ue_index=car.id,
+                metric=Logger.Metric.PINGPONG_RATE,
+                step=car_data.timestep,
+                value=car.get_pingpong_rate(),
+            )
 
-# Render Final Map
-print(Fore.CYAN + Style.BRIGHT + "--- Rendering Final Output ---")
-Render.render_map(bs_list=bs_list, ue_list=list(cars.values()))
+# Log global handover summary
+last_timestep = FcdParser.last_timestep()
+global_total_handovers = sum(ue.get_total_handovers() for ue in cars.values())
+global_total_pingpong = sum(ue.get_total_pingpong() for ue in cars.values())
+global_pingpong_rate = (
+    global_total_pingpong / global_total_handovers
+    if global_total_handovers > 0
+    else 0.0
+)
+logger.log_global_metric(
+    metric=Logger.Metric.TOTAL_HANDOVERS,
+    value=global_total_handovers,
+    step=last_timestep,
+)
+logger.log_global_metric(
+    metric=Logger.Metric.TOTAL_PINGPONG,
+    value=global_total_pingpong,
+    step=last_timestep,
+)
+logger.log_global_metric(
+    metric=Logger.Metric.PINGPONG_RATE,
+    value=global_pingpong_rate,
+    step=last_timestep,
+)
+
 
 for bs in bs_list:
     print(
         Fore.BLUE
         + f"Base Station {bs.id} served UEs: {[ue.id for ue in bs.connected_ues]}"
     )
-print(
-    Fore.RED
-    + Style.BRIGHT
-    + f"Total Handovers: {sum([ue.get_total_handovers() for ue in cars.values()])}"
-)
+print(Fore.RED + Style.BRIGHT + f"Global Handovers: {global_total_handovers}")
+print(Fore.RED + Style.BRIGHT + f"Global Ping Pongs: {global_total_pingpong}")
+print(Fore.RED + Style.BRIGHT + f"Global Ping Pong rate: {global_pingpong_rate}%")
+
+# Render Final Map
+print(Fore.CYAN + Style.BRIGHT + "--- Rendering Final Output ---")
+Render.render_map(bs_list=bs_list, ue_list=list(cars.values()))
 if SHOW_FOLIUM_OUTPUT:
     webbrowser.open(Path(FOLIUM_OUTPUT).resolve())
 

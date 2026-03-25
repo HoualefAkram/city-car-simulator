@@ -13,6 +13,9 @@ class Logger:
         RSRP = "RSRP"
         RSRQ = "RSRQ"
         EPSILON = "Epsilon"
+        TOTAL_HANDOVERS = "Total_Handovers"
+        TOTAL_PINGPONG = "Total_Pingpong"
+        PINGPONG_RATE = "Pingpong_Rate"
 
     def __init__(self, logdir: str = "outputs/runs"):
         run_name = datetime.now().strftime("%Y%m%d_%H%M%S")
