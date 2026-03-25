@@ -24,7 +24,7 @@ class HandoverEnv(gym.Env):
             i: UserEquipment(
                 id=i,
                 all_bs=base_towers,
-                print_report_on_movement=False,
+                print_logs_on_movement=False,
                 handover_algorithm=HandoverAlgorithm.DDQN_CHO,
             )
             for i in range(num_ue)

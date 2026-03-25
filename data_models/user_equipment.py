@@ -20,7 +20,7 @@ class UserEquipment:
         latlng: Optional[LatLng] = None,  # can be null only if move_to() is used
         g_rx: float = 0.0,
         serving_bs: Optional[BaseTower] = None,
-        print_report_on_movement: bool = False,
+        print_logs_on_movement: bool = False,
         handover_algorithm: HandoverAlgorithm = HandoverAlgorithm.A3_RSRP_3GPP,
     ):
         self.id: int = id
@@ -29,7 +29,7 @@ class UserEquipment:
         self.serving_bs = serving_bs
         self.path_history: list[LatLng] = [] if latlng is None else [latlng]
         self.all_bs = all_bs
-        self.print_report_on_movement = print_report_on_movement
+        self.print_report_on_movement = print_logs_on_movement
         self.generated_reports: list[NGRANReport] = []
         # (bs_id, timestep) after each connection
         self.connection_history: list[tuple[int, float]] = []
@@ -101,16 +101,18 @@ class UserEquipment:
         if target_bs:
             # Log handover decision, (or if the user connected for the first time)
             if self.serving_bs:
-                print(
-                    Fore.RED
-                    + f"{self.id} handover from BS {self.serving_bs.id} to BS {target_bs.id} at {timestep}"
-                )
+                if self.print_report_on_movement:
+                    print(
+                        Fore.RED
+                        + f"{self.id} handover from BS {self.serving_bs.id} to BS {target_bs.id} at {timestep}"
+                    )
                 self.handover(target_bs=target_bs, timestep=timestep)
             else:
-                print(
-                    Fore.MAGENTA
-                    + f"UE {self.id} connecting to BS {target_bs.id} at {timestep}"
-                )
+                if self.print_report_on_movement:
+                    print(
+                        Fore.MAGENTA
+                        + f"UE {self.id} connecting to BS {target_bs.id} at {timestep}"
+                    )
                 self.connect_to_tower(bs=target_bs, timestep=timestep)
 
         return report

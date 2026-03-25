@@ -36,7 +36,7 @@ cars: dict[int, UserEquipment] = {
     i: UserEquipment(
         id=i,
         all_bs=bs_list,
-        print_report_on_movement=False,
+        print_logs_on_movement=False,
         handover_algorithm=HandoverAlgorithm.A3_RSRP_3GPP,
     )
     for i in range(num_ue)

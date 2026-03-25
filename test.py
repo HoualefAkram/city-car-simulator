@@ -41,13 +41,14 @@ if not bs_list:
 # Parse Trace and Move Cars
 fcd_data: list[dict[int, CarFcdData]] = FcdParser.parse_fcd_trace()
 
+
 # Initialize User Equipment (Cars)
 num_ue = FcdParser.count_vehicles()
 cars: dict[int, UserEquipment] = {
     i: UserEquipment(
         id=i,
         all_bs=bs_list,
-        print_report_on_movement=False,
+        print_logs_on_movement=False,
         handover_algorithm=HandoverAlgorithm.A3_RSRP_3GPP,
     )
     for i in range(num_ue)
@@ -58,7 +59,17 @@ print(
     + Style.BRIGHT
     + f"--- Simulating Movement and Network Logic for {num_ue} Vehicles ---"
 )
-for fcd in fcd_data:
+total_steps = len(fcd_data)
+for i in range(total_steps):
+    fcd = fcd_data[i]
+
+    # print
+    percent = (i / total_steps) * 100 if total_steps > 0 else 100
+    print(
+        f"\r{Fore.CYAN}{Style.BRIGHT}{percent:.0f}% ,{i+1}/{total_steps} timesteps",
+        flush=True,
+        end="",
+    )
     for car_id, car_data in fcd.items():
         if car_id in cars:  # Safe check in case SUMO spawned extra vehicles
             car = cars[car_id]
@@ -95,6 +106,7 @@ for fcd in fcd_data:
                 step=car_data.timestep,
                 value=car.get_pingpong_rate(),
             )
+print()
 
 # Log global handover summary
 last_timestep = FcdParser.last_timestep()
