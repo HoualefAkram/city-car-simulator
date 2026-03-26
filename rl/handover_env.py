@@ -24,6 +24,8 @@ class HandoverEnv(gym.Env):
         self.agent = self.user_equipments[0]
         # All Base Towers
         self.base_towers = base_towers
+        # Top-4 Filtering
+        self.current_top_4: list[BaseTower] = []
         # action space: choosing 1 of 4 BS
         self.action_space = Discrete(4)
         # observation Space
@@ -68,8 +70,8 @@ class HandoverEnv(gym.Env):
         report: NGRANReport = self.agent.generated_reports[-1]
 
         # extract RSRP/RSRQ values from the 4 towers
-        rsrp_list = [report.rsrp_values.get(bs.id, 0) for bs in self.base_towers]
-        rsrq_list = [report.rsrq_values.get(bs.id, 0) for bs in self.base_towers]
+        rsrp_list = [report.rsrp_values.get(bs.id, 0) for bs in self.current_top_4]
+        rsrq_list = [report.rsrq_values.get(bs.id, 0) for bs in self.current_top_4]
         # connected tower index (garanteed to have a serving bs since generated reports >= 1)
         serving_position = self.base_towers.index(self.agent.serving_bs)
         serving_one_hot = [
@@ -80,7 +82,11 @@ class HandoverEnv(gym.Env):
         return obs
 
     def step(self, action):
-        target_bs = self.base_towers[action]
+        target_bs = (
+            self.current_top_4[action]
+            if self.current_top_4
+            else self._top_4_towers()[action]
+        )
         handover_penalty = 15
         current_fcd_dict: dict[int, CarFcdData] = self.fcd_data[self.steps]
         if self.agent.id not in current_fcd_dict:
@@ -98,9 +104,8 @@ class HandoverEnv(gym.Env):
             else:
                 # Trigger Handover
                 self.agent.handover(target_bs, timestep=timestep)
-                handover_executed = True  # Penalty to prevent ping-pongs
+                handover_executed = True
 
-        new_tower = self.agent.serving_bs
         # Move cars
         if self.steps < len(self.fcd_data):
             fcds = self.fcd_data[self.steps].values()
@@ -110,38 +115,50 @@ class HandoverEnv(gym.Env):
                     # NOTE: DDQN Algorithm SHOULD NOT Execute the handover
                     car.move_to(fcd.latlng, timestep=fcd.timestep)
 
+        new_tower = self.agent.serving_bs
         # get agent report before/after moving
-        report_before = self.agent.generated_reports[-2]
         report_after = self.agent.generated_reports[-1]
-        # NOTE: RSRP and RSRQ are normalized. (0 to 1)
-        # RSRP: /127 NR, /97 LTE
-        # RSRQ 127 ,/34 LTE
-        rsrp_before = WaveUtils.normalize_rsrp_index(
-            rsrp_index=report_before.rsrp_values[self.agent.serving_bs.id],
-            radio_type=old_tower.radio,
-        )
-        rsrp_after = WaveUtils.normalize_rsrp_index(
-            rsrp_index=report_after.rsrp_values[self.agent.serving_bs.id],
-            radio_type=new_tower.radio,
-        )
+        self.current_top_4 = self._top_4_towers(report_after)
 
-        rsrq_before = WaveUtils.normalize_rsrq_index(
-            rsrq_index=report_before.rsrq_values[self.agent.serving_bs.id],
-            radio_type=old_tower.radio,
-        )
-        rsrq_after = WaveUtils.normalize_rsrq_index(
-            rsrq_index=report_after.rsrq_values[self.agent.serving_bs.id],
-            radio_type=new_tower.radio,
-        )
+        # --- Calculate Reward ---
+        if len(self.agent.generated_reports) >= 2:
+            report_before = self.agent.generated_reports[-2]
 
-        if handover_executed:
-            reward = (
-                (rsrp_after - rsrp_before)
-                + (rsrq_after - rsrq_before)
-                - handover_penalty
+            rsrp_before = WaveUtils.normalize_rsrp_index(
+                report_before.rsrp_values.get(old_tower.id, 0), old_tower.radio
             )
+            rsrp_after = WaveUtils.normalize_rsrp_index(
+                report_after.rsrp_values.get(new_tower.id, 0), new_tower.radio
+            )
+            rsrq_before = WaveUtils.normalize_rsrq_index(
+                report_before.rsrq_values.get(old_tower.id, 0), old_tower.radio
+            )
+            rsrq_after = WaveUtils.normalize_rsrq_index(
+                report_after.rsrq_values.get(new_tower.id, 0), new_tower.radio
+            )
+
+            delta_rsrp = rsrp_after - rsrp_before
+            delta_rsrq = rsrq_after - rsrq_before
+
+            if handover_executed:
+                reward = delta_rsrp + delta_rsrq - handover_penalty
+            else:
+                # Opportunity cost logic: Did we ignore a better tower?
+                best_rsrp = max(
+                    WaveUtils.normalize_rsrp_index(
+                        report_after.rsrp_values.get(bs.id, 0), bs.radio
+                    )
+                    for bs in self.current_top_4
+                )
+                best_rsrq = max(
+                    WaveUtils.normalize_rsrq_index(
+                        report_after.rsrq_values.get(bs.id, 0), bs.radio
+                    )
+                    for bs in self.current_top_4
+                )
+                reward = (rsrp_after - best_rsrp) + (rsrq_after - best_rsrq)
         else:
-            reward = (rsrp_before - rsrp_after) + (rsrq_before - rsrq_after)
+            reward = 0.0
 
         truncated = self.steps >= len(self.fcd_data)  # End of the SUMO trace
         terminated = False
