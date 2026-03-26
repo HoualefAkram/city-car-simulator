@@ -61,18 +61,40 @@ class WaveUtils:
         return rsrp
 
     @staticmethod
+    def calculate_load_factor(
+        bs: BaseTower,
+        alpha: float = 0.1,  # always-on fraction (reference signals + control channels)
+    ) -> float:
+        """
+        Models RB utilization as a load scaling factor [alpha, 1.0].
+        - alpha: minimum power fraction (reference signals are always transmitted)
+        - rho: fraction of RBs in use = min(connected_ues / N_RB, 1.0)
+        - Returns: alpha + (1 - alpha) * rho
+        When the cell is empty, only reference/control channels radiate (alpha).
+        When fully loaded, the full bandwidth is utilized (1.0).
+        """
+        n_rb = WaveUtils.get_resource_blocks(bs.bandwidth)
+        rho = min(len(bs.connected_ues) / n_rb, 1.0) if n_rb > 0 else 0.0
+        return alpha + (1.0 - alpha) * rho
+
+    @staticmethod
     def calculate_rssi(
         all_rsrp_dBm: list[float],
         bandwidth_hz: float,
+        load_factors: list[float] | None = None,
         noise_figure_db: float = 7.0,  # In a perfect world, the UE antenna would receive signals with zero added noise. In reality, the UE's hardware (amplifiers, circuits) adds some noise on top of what it receives. `noise_figure_db` measures how much extra noise the hardware adds.
     ) -> float:
-        # RSSI (dBm) = BS signals (dominant) + thermal noise + UE interference (negligible)
-        # convert to linear then sum: total = 10^(RSRP_bs1/10) + 10^(RSRP_bs2/10) + 10^(noise/10)
-        # convert back to dBm: RSSI  = 10 * log10(total)
+        # RSSI (dBm) = BS signals (scaled by cell load) + thermal noise
+        # Each tower's wideband power contribution scales with its RB utilization:
+        #   P_tower = RSRP_linear * load_factor
+        # where load_factor = alpha + (1 - alpha) * rho  (see calculate_load_factor)
         # Thermal noise floor
         noise_dBm = -174 + 10 * np.log10(bandwidth_hz) + noise_figure_db
-        # Convert all signals + noise to linear and sum
-        total_linear = sum(10 ** (rsrp / 10) for rsrp in all_rsrp_dBm)
+        # Convert all signals + noise to linear and sum (scaled by load)
+        total_linear = 0.0
+        for i, rsrp in enumerate(all_rsrp_dBm):
+            scale = load_factors[i] if load_factors is not None else 1.0
+            total_linear += 10 ** (rsrp / 10) * scale
         total_linear += 10 ** (noise_dBm / 10)
 
         return 10 * np.log10(total_linear)
@@ -82,11 +104,13 @@ class WaveUtils:
         serving_tower: BaseTower,
         serving_rsrp: float,
         all_rsrp_dBm: list[float],
+        load_factors: list[float] | None = None,
     ):
         # 10 * np.log10(n) + serving_rsrp - rssi (*n is removed, since rsrp returns the total Power, not only per block)
         rssi = WaveUtils.calculate_rssi(
             all_rsrp_dBm=all_rsrp_dBm,
             bandwidth_hz=serving_tower.bandwidth,
+            load_factors=load_factors,
         )
 
         return serving_rsrp - rssi

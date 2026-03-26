@@ -145,12 +145,16 @@ class UserEquipment:
 
         all_rsrp_list = list(raw_rsrp_dbm.values())
 
+        # Cell load factors (RB utilization per tower)
+        load_factors = [WaveUtils.calculate_load_factor(bs) for bs in all_bs]
+
         # RSRQ
         for bs in all_bs:
             raw_rsrq_db = WaveUtils.calculate_rsrq(
                 serving_tower=bs,
                 serving_rsrp=raw_rsrp_dbm[bs.id],
                 all_rsrp_dBm=all_rsrp_list,
+                load_factors=load_factors,
             )
 
             radio_type = bs.radio
