@@ -54,7 +54,7 @@ class UserEquipment:
         """Returns the total number of handovers (excludes the initial connection)."""
         return max(0, len(self.connection_history) - 1)
 
-    def get_total_pingpong(self, min_time_of_stay: float = 1.0) -> int:
+    def get_total_pingpong(self, min_time_of_stay: float = 3.0) -> int:
         """Counts ping-pong handovers: A→B→A where time spent on B < min_time_of_stay (seconds)."""
         count = 0
         history = self.connection_history
@@ -188,8 +188,8 @@ class UserEquipment:
 
     def check_handover_3gpp_rsrp(
         self,
-        hysteresis: float = 3.0,
-        time_to_trigger: float = 3.0,
+        hysteresis: float = 2.0,
+        time_to_trigger: float = 0.640,  # 640 ms
     ) -> Optional[BaseTower]:
         """Checks if a handover is needed based on 3GPP RSRP criteria."""
         # If serving bs is null, connect to the best available option

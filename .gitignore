@@ -120,7 +120,7 @@ ipython_config.py
 .pdm-python
 .pdm-build/
 .claude/
-ignore/
+**temp_ignored**
 
 # pixi
 #   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
