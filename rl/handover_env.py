@@ -37,7 +37,7 @@ class HandoverEnv(gym.Env):
         # observation Space
         low = np.array([0] * 8 + [0] * 4)  # Min values for RSRP/RSRQ and One-Hot
         high = np.array([127] * 8 + [1] * 4)  # Max values
-        self.observation_space = Box(low=low, high=high, dtype=np.float32)
+        self.observation_space = Box(low=low, high=high, dtype=np.int32)
 
         self.steps = 0
 
@@ -84,7 +84,7 @@ class HandoverEnv(gym.Env):
             serving_position = self.current_top_4.index(self.agent.serving_bs)
             serving_one_hot[serving_position] = 1
         # observation, serving_one_hot will be [0,0,0,0] if ue is not connected to any tower
-        obs = np.concatenate([rsrp_list, rsrq_list, serving_one_hot], dtype=np.float32)
+        obs = np.concatenate([rsrp_list, rsrq_list, serving_one_hot], dtype=np.int32)
         return obs
 
     def step(self, action):
