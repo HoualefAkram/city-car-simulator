@@ -3,8 +3,9 @@ import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
+from colorama import Fore, Style, init
 
+init(autoreset=True)
 # --- Custom Imports ---
 from data_models.latlng import LatLng
 from rl.handover_env import HandoverEnv
@@ -201,8 +202,17 @@ for epoche in range(start_epoch, epoches):
     tb_logger.log_ue_metric(ue_id, Logger.Metric.RSRP, avg_rsrp, epoche)
     tb_logger.log_ue_metric(ue_id, Logger.Metric.RSRQ, avg_rsrq, epoche)
 
+    # --- Terminal Output ---
+    current_epoch = epoche + 1
+    percent_complete = (current_epoch / epoches) * 100
+
     print(
-        f"Epoch {epoche+1}/{epoches} | Reward: {total_reward:.2f} | Loss: {avg_loss:.4f} | Handovers: {env.agent.get_total_handovers()} | Ping-Pongs: {env.agent.get_total_pingpong()}"
+        f"{Fore.CYAN}{Style.BRIGHT}Epoch {current_epoch}/{epoches} "
+        f"{Fore.YELLOW}[{percent_complete:.1f}%] "
+        f"{Fore.GREEN}| Reward: {total_reward:.2f} "
+        f"{Fore.WHITE}| Loss: {avg_loss:.4f} "
+        f"{Fore.BLUE}| Handovers: {env.agent.get_total_handovers()} "
+        f"{Fore.RED}| Ping-Pongs: {env.agent.get_total_pingpong()}"
     )
 
 # Close the TensorBoard writer when completely finished
