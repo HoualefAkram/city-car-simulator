@@ -117,7 +117,7 @@ class HandoverEnv(gym.Env):
             if self.agent.serving_bs is None:
                 self.agent.connect_to_tower(bs=target_bs, timestep=timestep)
             else:
-                # Trigger Handover
+                # Trigger Handover For the agent only.
                 self.agent.handover(target_bs, timestep=timestep)
                 handover_executed = True
 
