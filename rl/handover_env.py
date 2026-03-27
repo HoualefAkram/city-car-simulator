@@ -99,7 +99,7 @@ class HandoverEnv(gym.Env):
 
     def step(self, action):
         """Execute the action Handover/No Handover then move all the cars once"""
-        # Reset() garantees current_top_4 is populated
+        # Reset() guarantees current_top_4 is populated
         target_bs = self.current_top_4[action]
         # NOTE: increase to reduce pingpong, reduce to improve RSRP/RSRQ
         handover_penalty = 0.1
