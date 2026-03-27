@@ -223,7 +223,7 @@ class HandoverEnv(gym.Env):
         }
         self.agent = self.user_equipments[0]
 
-        # Move the agent to its starting position to generate the first report TODO: make sure the report is generated
+        # Move the agent to its starting position to generate the first report
         # one of the checks is enough, just for safety
         if len(self.fcd_data) > 0 and self.agent.id in self.fcd_data[0]:
             start_data = self.fcd_data[0][self.agent.id]
