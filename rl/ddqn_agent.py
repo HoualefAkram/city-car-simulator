@@ -5,6 +5,8 @@ import torch.nn as nn
 import torch.optim as optim
 from colorama import Fore, Style, init
 
+from data_models.q_network import QNetwork
+
 init(autoreset=True)
 # --- Custom Imports ---
 from data_models.latlng import LatLng
@@ -12,42 +14,32 @@ from rl.handover_env import HandoverEnv
 from rl.replay_buffer import ReplayBuffer
 from rl.checkpoint_manager import CheckpointManager
 from utils.logger import Logger
-from prepare import MAP_TOP_LEFT, MAP_BOTTOM_RIGHT, MCC, SIMULATION_TIME, STEP_LENGTH
+from prepare import (
+    MAP_TOP_LEFT,
+    MAP_BOTTOM_RIGHT,
+    MCC,
+    SIMULATION_TIME,
+    STEP_LENGTH,
+)
 
 
 # ==========================================
-# 1. NEURAL NETWORK ARCHITECTURE
+# 1. Params / networks
 # ==========================================
 
+USE_GPU = True
+MODEL_SAVE_LOCATION = "outputs/final_ddqn_model.pth"
 
-class QNetwork(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(12, 256),
-            nn.GELU(),
-            nn.Linear(256, 128),
-            nn.GELU(),
-            nn.Linear(128, 64),
-            nn.GELU(),
-            nn.Linear(64, 4),
-        )
+device = torch.device("cuda" if USE_GPU and torch.cuda.is_available() else "cpu")
 
-    def forward(self, x):
-        return self.net(x)
+policy_network = QNetwork().to(device)
+target_network = QNetwork().to(device)
 
-
-def hard_update(target_net, policy_net):
-    target_net.load_state_dict(policy_net.state_dict())
-
+target_network.hard_update(network=policy_network)
 
 # ==========================================
 # 2. INITIALIZATION & HYPERPARAMETERS
 # ==========================================
-
-
-USE_GPU = True
-device = torch.device("cuda" if USE_GPU and torch.cuda.is_available() else "cpu")
 
 env = HandoverEnv(
     top_left=MAP_TOP_LEFT,
@@ -65,9 +57,6 @@ gamma = 0.97
 update_rate = 200
 batch_size = 64
 
-policy_network = QNetwork().to(device)
-target_network = QNetwork().to(device)
-hard_update(target_network, policy_network)
 
 criterion = nn.SmoothL1Loss()
 adam = optim.Adam(policy_network.parameters(), lr=lr)
@@ -186,7 +175,7 @@ for epoche in range(start_epoch, epoches):
             counter += 1
             if counter >= update_rate:
                 counter = 0
-                hard_update(target_network, policy_network)
+                target_network.hard_update(network=policy_network)
 
     # Decay Epsilon
     epsilon = max(min_epsilon, epsilon * decay_val)
@@ -244,4 +233,4 @@ tb_logger.close()
 
 # --- EXPORT MODEL ---
 print(f"{Fore.GREEN}{Style.BRIGHT}Training Complete! Exporting final model...")
-torch.save(policy_network.state_dict(), "outputs/final_ddqn_model.pth")
+torch.save(policy_network.state_dict(), MODEL_SAVE_LOCATION)

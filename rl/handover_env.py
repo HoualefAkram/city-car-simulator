@@ -6,6 +6,7 @@ from data_models.car_fcd_data import CarFcdData
 from data_models.handover_algorithm import HandoverAlgorithm
 from data_models.ng_ran_report import NGRANReport
 from data_models.user_equipment import UserEquipment
+from helpers.filters import Filters
 from utils.fcd_parser import FcdParser
 from utils.map_downloader import MapDownloader
 from utils.path_gen import PathGeneration
@@ -53,31 +54,11 @@ class HandoverEnv(gym.Env):
         self.steps = 0
 
     def _top_4_towers(self, report: NGRANReport):
-        rsrp_weight = 0.5
-        rsrq_weight = 0.5
-
-        scores: dict[int, float] = {}
-
-        for bs in self.base_towers:
-            bs_id = bs.id
-
-            norm_rsrp = WaveUtils.normalize_rsrp_index(
-                report.rsrp_values.get(bs_id, 0), bs.radio
-            )
-            norm_rsrq = WaveUtils.normalize_rsrq_index(
-                report.rsrq_values.get(bs_id, 0), bs.radio
-            )
-
-            scores[bs_id] = (norm_rsrp * rsrp_weight) + (norm_rsrq * rsrq_weight)
-
-        sorted_scores = sorted(scores.items(), key=lambda item: item[1], reverse=True)
-
-        top_4_ids = [item[0] for item in sorted_scores[:4]]
-
-        tower_lookup = {bs.id: bs for bs in self.base_towers}
-        top_4_towers = [tower_lookup[t_id] for t_id in top_4_ids]
-
-        return top_4_towers
+        return Filters.top_k_towers(
+            all_bs=self.base_towers,
+            report=report,
+            k=4,
+        )
 
     def _get_obs(self):
         # NOTE: obs is normalized

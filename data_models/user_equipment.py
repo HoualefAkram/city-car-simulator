@@ -1,12 +1,17 @@
 from typing import Optional
 from data_models.handover_algorithm import HandoverAlgorithm
 from data_models.latlng import LatLng
+from data_models.q_network import QNetwork
+from helpers.filters import Filters
+from helpers.functions import Functions
 from utils.location_utils import LocationUtils
 from data_models.base_tower import BaseTower
 from data_models.ng_ran_report import NGRANReport
 from utils.wave_utils import WaveUtils
 from colorama import Fore, init
 from math import ceil
+import torch
+import numpy as np
 
 init(autoreset=True)
 
@@ -14,6 +19,7 @@ init(autoreset=True)
 class UserEquipment:
 
     __min_time_of_stay: float = 2.5
+    __model = None
 
     def __init__(
         self,
@@ -31,11 +37,15 @@ class UserEquipment:
         self.serving_bs = serving_bs
         self.path_history: list[LatLng] = [] if latlng is None else [latlng]
         self.all_bs = all_bs
-        self.print_report_on_movement = print_logs_on_movement
+        self.print_logs_on_movement = print_logs_on_movement
         self.generated_reports: list[NGRANReport] = []
         # (bs_id, timestep) after each connection
         self.connection_history: list[tuple[int, float]] = []
         self.handover_algorithm = handover_algorithm
+
+    @classmethod
+    def load_model(cls, model_path: str = "outputs/final_ddqn_model.pth"):
+        cls.__model = QNetwork.from_state_dict(torch.load(model_path)).eval()
 
     def __repr__(self):
         return f"UserEquipment(id: {self.id}, latlng: {self.latlng}, serving_bs: {self.serving_bs.id if self.serving_bs else None})"
@@ -44,7 +54,7 @@ class UserEquipment:
         return f"UserEquipment(id: {self.id}, latlng: {self.latlng}, serving_bs: {self.serving_bs.id if self.serving_bs else None})"
 
     def toggle_report_print(self, value: bool):
-        self.print_report_on_movement = value
+        self.print_logs_on_movement = value
 
     def __append_path_history(self) -> None:
         self.path_history.append(self.latlng)
@@ -85,12 +95,12 @@ class UserEquipment:
 
         return total_pingpong / total_handovers
 
-    def __on_movement(self, timestep) -> NGRANReport:
+    def __on_movement(self, timestep: float) -> NGRANReport:
         self.__append_path_history()
         report = self.generate_report(all_bs=self.all_bs, timestep=timestep)
         self.__append_generated_reports(report)
         # Logs
-        if self.print_report_on_movement:
+        if self.print_logs_on_movement:
             print(report)
 
         # Check for handover
@@ -105,14 +115,14 @@ class UserEquipment:
         if target_bs:
             # Log handover decision, (or if the user connected for the first time)
             if self.serving_bs:
-                if self.print_report_on_movement:
+                if self.print_logs_on_movement:
                     print(
                         Fore.RED
                         + f"{self.id} handover from BS {self.serving_bs.id} to BS {target_bs.id} at {timestep}"
                     )
                 self.handover(target_bs=target_bs, timestep=timestep)
             else:
-                if self.print_report_on_movement:
+                if self.print_logs_on_movement:
                     print(
                         Fore.MAGENTA
                         + f"UE {self.id} connecting to BS {target_bs.id} at {timestep}"
@@ -179,11 +189,44 @@ class UserEquipment:
         self.handover_algorithm = algorithm
 
     def check_handover_ddqn(self):
-        # TODO: Needed for testing, after the train is done
+        # return None if no reports are generated
+        if not self.generated_reports:
+            return None
+        # get latest report
+        report = self.generated_reports[-1]
+        # return best rsrp tower if no tower is connected
+        if not self.serving_bs:
+            best_bs_id = max(report.rsrp_values, key=report.rsrp_values.get)
+            best_bs = next((bs for bs in self.all_bs if bs.id == best_bs_id), None)
+            return best_bs
         # 1- Top-4 Filtering
+        top_4_towers = Filters.top_k_towers(
+            all_bs=self.all_bs,
+            report=report,
+        )
+        top_4_ids = [tower.id for tower in top_4_towers]
+        top_4_rsrp = []
+        top_4_rsrq = []
+        for i in range(len(top_4_ids)):
+            bs_id = top_4_ids[i]
+            top_4_rsrp.append(report.rsrp_values.get(bs_id, 0))
+            top_4_rsrq.append(report.rsrq_values.get(bs_id, 0))
         # 2- DDQN
+        serving_one_hot = [0, 0, 0, 0]
+        if self.serving_bs in top_4_towers:
+            serving_position = top_4_towers.index(self.serving_bs)
+            serving_one_hot[serving_position] = 1
+        state = np.concatenate(
+            [top_4_rsrp, top_4_rsrq, serving_one_hot], dtype=np.float32
+        )
+        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+        q_vals: list[float] = [q.item() for q in self.__model(state_tensor)]
         # 3- Softmax
+        q_vals_softmax: list[float] = Functions.softmax_all(all_values=q_vals)
         # 4- Top 2
+        indexed = list(enumerate(q_vals_softmax))
+        indexed.sort(key=lambda x: x[1], reverse=True)
+        top_2 = indexed[:2]  # [(tower_idx, softmax_val), ...etc]
         # 5- Weighted Sum
         # 6- Decision
         ...
