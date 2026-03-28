@@ -135,7 +135,8 @@ class HandoverEnv(gym.Env):
                 handover_executed = True
 
         # Move cars once, to get new
-        if self.steps < len(self.fcd_data):
+        total_timesteps = len(self.fcd_data)
+        if self.steps < total_timesteps:
             fcds = self.fcd_data[self.steps].values()
             for fcd in fcds:
                 car = self.user_equipments.get(fcd.id)
@@ -203,11 +204,11 @@ class HandoverEnv(gym.Env):
             reward = 0.0
 
         self.steps += 1
-        truncated = self.steps >= len(self.fcd_data)  # End of the SUMO trace
+        truncated = self.steps >= total_timesteps  # End of the SUMO trace
         terminated = False
         info = {
             "timestep": self.steps,
-            "total_timesteps": len(self.fcd_data),
+            "total_timesteps": total_timesteps,
         }
         obs = self._get_obs()
 
