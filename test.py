@@ -147,7 +147,7 @@ for bs in bs_list:
     )
 print(Fore.RED + Style.BRIGHT + f"Global Handovers: {global_total_handovers}")
 print(Fore.RED + Style.BRIGHT + f"Global Ping Pongs: {global_total_pingpong}")
-print(Fore.RED + Style.BRIGHT + f"Global Ping Pong rate: {global_pingpong_rate}%")
+print(Fore.RED + Style.BRIGHT + f"Global Ping Pong rate: {global_pingpong_rate * 100}%")
 
 # Render Final Map
 print(Fore.CYAN + Style.BRIGHT + "--- Rendering Final Output ---")

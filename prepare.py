@@ -12,7 +12,7 @@ MAP_BOTTOM_RIGHT = LatLng(51.499324, -0.109732)  # London
 MCC = 234  # UK
 OSM_DOWNLOAD_PATH = "cache/maps/map.osm"  # cache folder
 SIMULATION_TIME = 120  # (2 minutes)
-STEP_LENGTH = 1  # 1s
+STEP_LENGTH = 0.3  # 300 ms
 SEED = 200
 
 
