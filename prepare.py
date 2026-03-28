@@ -18,32 +18,31 @@ SEED = 200
 
 # --- Execution ---
 
-print(
-    Fore.CYAN
-    + Style.BRIGHT
-    + f"--- Preparing Simulation for {SIMULATION_TIME} seconds ---"
-)
+if __name__ == "__main__":
 
-MapDownloader.download_osm_by_bbox(
-    top_left=MAP_TOP_LEFT,
-    bottom_right=MAP_BOTTOM_RIGHT,
-    output_file=OSM_DOWNLOAD_PATH,
-)
+    print(
+        Fore.CYAN
+        + Style.BRIGHT
+        + f"--- Preparing Simulation for {SIMULATION_TIME} seconds ---"
+    )
 
+    MapDownloader.download_osm_by_bbox(
+        top_left=MAP_TOP_LEFT,
+        bottom_right=MAP_BOTTOM_RIGHT,
+        output_file=OSM_DOWNLOAD_PATH,
+    )
 
-bs_list: list[BaseTower] = TowerDownloader.download_towers_in_bbox(
-    top_left=MAP_TOP_LEFT,
-    bottom_right=MAP_BOTTOM_RIGHT,
-    mcc=MCC,
-)
+    bs_list: list[BaseTower] = TowerDownloader.download_towers_in_bbox(
+        top_left=MAP_TOP_LEFT,
+        bottom_right=MAP_BOTTOM_RIGHT,
+        mcc=MCC,
+    )
 
+    path_gen = PathGeneration(
+        end_simulation=SIMULATION_TIME,
+        step_length=STEP_LENGTH,
+        seed=SEED,
+    )
+    path_gen.run()
 
-path_gen = PathGeneration(
-    end_simulation=SIMULATION_TIME,
-    step_length=STEP_LENGTH,
-    seed=SEED,
-)
-path_gen.run()
-
-
-print(Fore.GREEN + Style.BRIGHT + f"--- Preparation Done! ---")
+    print(Fore.GREEN + Style.BRIGHT + f"--- Preparation Done! ---")
