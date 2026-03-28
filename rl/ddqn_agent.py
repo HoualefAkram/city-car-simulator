@@ -126,6 +126,12 @@ for epoche in range(start_epoch, epoches):
         total_reward += reward
         step_count += 1
 
+        print(
+            f"\r{Fore.CYAN}{Style.BRIGHT}{info["timestep"]}/{info["total_timesteps"]}",
+            flush=True,
+            end="",
+        )
+
         # Track raw RSRP/RSRQ if connected to a tower
         if env.agent.serving_bs and len(env.agent.generated_reports) > 0:
             last_report = env.agent.generated_reports[-1]

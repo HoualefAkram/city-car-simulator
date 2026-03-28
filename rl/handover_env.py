@@ -205,8 +205,10 @@ class HandoverEnv(gym.Env):
         self.steps += 1
         truncated = self.steps >= len(self.fcd_data)  # End of the SUMO trace
         terminated = False
-        info = {}  # TODO: add info if needed in the future
-
+        info = {
+            "timestep": self.steps,
+            "total_timesteps": len(self.fcd_data),
+        }
         obs = self._get_obs()
 
         return obs, float(reward), terminated, truncated, info
