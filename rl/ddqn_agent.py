@@ -64,8 +64,8 @@ hard_update(target_network, policy_network)
 criterion = nn.MSELoss()
 adam = optim.Adam(policy_network.parameters(), lr=lr)
 
-memory = ReplayBuffer(file_path="training/replay_buffer.pkl", max_len=10000)
-checkpoint_manager = CheckpointManager(file_path="training/ddqn_checkpoint.pth")
+memory = ReplayBuffer()
+checkpoint_manager = CheckpointManager()
 tb_logger = Logger(logdir="outputs/runs")  # Initialize TensorBoard Writer
 
 start_epoch, epsilon = checkpoint_manager.load_checkpoint(
