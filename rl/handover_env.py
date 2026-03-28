@@ -48,7 +48,7 @@ class HandoverEnv(gym.Env):
         # observation Space
         self.observation_space = Box(low=0.0, high=1.0, shape=(12,), dtype=np.float32)
         self.step_len = step_len
-        self.self.simulation_time = self.simulation_time
+        self.simulation_time = simulation_time
 
         self.steps = 0
 
