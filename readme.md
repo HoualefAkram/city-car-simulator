@@ -17,7 +17,7 @@ This simulator models that process from first principles using real map data, re
 - **Real city maps** — downloads street maps from OpenStreetMap via Overpass API, cached locally to avoid redundant downloads
 - **Real tower data** — fetches live LTE/NR tower locations from OpenCellID, cached locally to avoid redundant API calls
 - **Realistic vehicle movement** — uses SUMO (Simulation of Urban Mobility) to generate traffic on actual streets
-- **3GPP-compliant signal model** — log-distance path loss, RSRP, RSRQ, thermal noise
+- **3GPP-compliant signal model** — log-distance path loss, shadow fading (Gudmundson), fast fading (Rician/Rayleigh), RSRP, RSRQ, thermal noise
 - **3GPP A3 handover logic** — hysteresis-based handover decisions (3 dB margin) with Time-to-Trigger (TTT)
 - **Multi-UE support** — simulate multiple cars simultaneously
 - **Interactive map output** — Folium HTML visualization, auto-opened in browser
@@ -147,7 +147,8 @@ Simulation parameters are configured in `prepare.py` and `test.py`:
 | `MAP_BOTTOM_RIGHT` | `(51.499324, -0.109732)` | SE corner of simulation area |
 | `MCC` | `234` | Mobile Country Code (UK) |
 | `SEED` | `200` | Random seed for reproducible SUMO traffic |
-| `STEP_LENGTH` | `1` | Simulation step length in seconds |
+| `SIMULATION_TIME` | `300` | Simulation duration in seconds (5 minutes) |
+| `STEP_LENGTH` | `0.3` | Simulation step length in seconds (300 ms) |
 | `SHOW_FOLIUM_OUTPUT` | `True` | Auto-open HTML output in browser (`test.py`) |
 | `SHOW_TENSORBOARD_OUTPUT` | `True` | Auto-launch TensorBoard (`test.py`) |
 
@@ -157,12 +158,12 @@ Simulation parameters are configured in `prepare.py` and `test.py`:
 |---|---|---|
 | `USE_GPU` | `True` | Use CUDA GPU if available, `False` to force CPU |
 | `epoches` | `500` | Number of training episodes |
-| `lr` | `1e-3` | Adam learning rate |
-| `gamma` | `0.99` | Discount factor |
+| `lr` | `5e-4` | Adam learning rate |
+| `gamma` | `0.97` | Discount factor |
 | `decay_val` | `0.99` | Epsilon decay multiplier per epoch |
 | `min_epsilon` | `0.05` | Minimum exploration rate |
-| `update_rate` | `100` | Target network hard update interval (training steps) |
-| `batch_size` | `32` | Replay buffer sample size |
+| `update_rate` | `200` | Target network hard update interval (training steps) |
+| `batch_size` | `64` | Replay buffer sample size |
 
 ---
 
@@ -179,27 +180,49 @@ PL(d) = PL(d0) + 10·n·log10(d/d0)
 | `d0` | 1 m | Reference distance |
 | `n` (LOS) | 2.0 | Path loss exponent — clear line of sight |
 | `n` (NLOS) | 3.0 | Path loss exponent — urban obstructions |
-| LOS threshold | 20 m | Distance under which LOS is assumed |
+| LOS threshold | 5 m | Distance under which LOS is assumed |
 
 ### RSRP
 
 ```
-RSRP (dBm) = P_tx + G_tx + G_rx - PL(d)
+RSRP (dBm) = P_tx + G_tx + G_rx - PL(d) - L_shadow + L_fast
 ```
 
-| Parameter | Value | Description |
-|---|---|---|
-| `P_tx` | 43 dBm | BS transmit power (20 W, typical 5G macro) |
-| `G_tx` | 15 dBi | BS sector antenna gain |
-| `G_rx` | 0 dBi | UE omnidirectional antenna gain |
+| Parameter | LTE | NR | Description |
+|---|---|---|---|
+| `P_tx` | 46 dBm (40W) | 43 dBm (20W) | BS transmit power (3GPP TS 36.104 / 38.104) |
+| `G_tx` | 15 dBi | 17 dBi | BS antenna gain (MIMO beamforming for NR) |
+| `G_rx` | 0 dBi | 0 dBi | UE omnidirectional antenna gain |
+| Frequency | 1800 MHz (Band 3) | 3500 MHz (n78) | Carrier frequency |
+
+### Shadow Fading (Gudmundson Model)
+
+Spatially correlated log-normal fading per link:
+
+```
+S_new = r · S_old + sqrt(1 - r^2) · N(0, sigma)
+r = exp(-d_moved / d_corr)
+```
+
+| Parameter | LOS | NLOS | Source |
+|---|---|---|---|
+| `sigma` | 4.0 dB | 7.82 dB | 3GPP TR 38.901 Table 7.5-6 |
+| `d_corr` | 50 m | 50 m | 3GPP decorrelation distance |
+
+### Fast Fading
+
+| Condition | Model | K-factor | Source |
+|---|---|---|---|
+| LOS | Rician | 9 dB | 3GPP TR 38.901 Table 7.5-6 UMi-LOS |
+| NLOS | Rayleigh | - | No dominant path component |
 
 ### RSRQ
 
 ```
-RSRQ (dB) = 10·log10(N) + RSRP - RSSI
+RSRQ (dB) = RSRP - RSSI
 ```
 
-Where `RSSI` = sum of signals from all detected BSs + thermal noise, and `N` = number of resource blocks.
+Where `RSSI` = sum of signals from all detected BSs + thermal noise.
 
 ### Thermal Noise Floor
 
@@ -207,11 +230,11 @@ Where `RSSI` = sum of signals from all detected BSs + thermal noise, and `N` = n
 noise (dBm) = -174 + 10·log10(bandwidth_hz) + noise_figure_db
 ```
 
-| Parameter | Value |
-|---|---|
-| Bandwidth | 100 MHz (5G sub-6 GHz) |
-| Noise figure | 7 dB (typical UE) |
-| Noise floor | ~-87 dBm |
+| Parameter | LTE | NR |
+|---|---|---|
+| Bandwidth | 20 MHz | 100 MHz |
+| Noise figure | 7 dB | 7 dB |
+| Noise floor | ~-100 dBm | ~-87 dBm |
 
 ---
 
@@ -244,8 +267,8 @@ Implements the **3GPP A3 event**: a handover is triggered when:
 RSRP(neighbor) > RSRP(serving) + hysteresis
 ```
 
-- Default hysteresis: **3 dB**
-- Time-to-Trigger (TTT): **3 seconds** — condition must hold for the last 3 seconds of reports
+- Default hysteresis: **2 dB**
+- Time-to-Trigger (TTT): **640 ms** — condition must hold for the last 640 ms of reports
 - Initial connection: UE automatically attaches to the strongest available tower
 - Decisions are evaluated at every simulation timestep
 
@@ -299,7 +322,9 @@ The reward uses a **counterfactual regret** framework — all signals are compar
 - [x] Checkpoint save/resume
 - [x] GPU support (CUDA)
 - [x] Performance metrics (ping-pong rate, handover count)
-- [ ] Shadowing / slow fading
+- [x] Shadow fading (Gudmundson correlated log-normal)
+- [x] Fast fading (Rician LOS / Rayleigh NLOS)
+- [x] Radio-specific BS parameters (LTE Band 3 / NR n78)
 - [ ] Trained DDQN agent evaluation vs 3GPP A3 baseline
 
 ---
@@ -322,8 +347,11 @@ The reward uses a **counterfactual regret** framework — all signals are compar
 
 ## References
 
-- 3GPP TR 38.901 — Channel model for frequencies from 0.5 to 100 GHz
+- 3GPP TR 38.901 — Channel model for frequencies from 0.5 to 100 GHz (shadow/fast fading parameters)
+- 3GPP TS 36.104 — LTE Base Station radio transmission and reception (LTE power classes)
+- 3GPP TS 38.104 — NR Base Station radio transmission and reception (NR power classes)
 - 3GPP TS 36.214 — LTE physical layer measurements (RSRP, RSRQ definitions)
+- Gudmundson, M. — *Correlation Model for Shadow Fading in Mobile Radio Systems* (1991)
 - Rappaport, T.S. — *Wireless Communications: Principles and Practice*
 
 ---
