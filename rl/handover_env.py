@@ -155,27 +155,26 @@ class HandoverEnv(gym.Env):
 
         # --- Calculate Reward ---
         if len(self.agent.generated_reports) >= 2 and tower_before_action is not None:
-            report_before = self.agent.generated_reports[-2]
 
-            rsrp_before = WaveUtils.normalize_rsrp_index(
-                report_before.rsrp_values.get(tower_before_action.id, 0),
+            rsrp_stayed = WaveUtils.normalize_rsrp_index(
+                report_after.rsrp_values.get(tower_before_action.id, 0),
                 tower_before_action.radio,
             )
-            rsrp_after = WaveUtils.normalize_rsrp_index(
+            rsrp_current = WaveUtils.normalize_rsrp_index(
                 report_after.rsrp_values.get(tower_after_action.id, 0),
                 tower_after_action.radio,
             )
-            rsrq_before = WaveUtils.normalize_rsrq_index(
-                report_before.rsrq_values.get(tower_before_action.id, 0),
+            rsrq_stayed = WaveUtils.normalize_rsrq_index(
+                report_after.rsrq_values.get(tower_before_action.id, 0),
                 tower_before_action.radio,
             )
-            rsrq_after = WaveUtils.normalize_rsrq_index(
+            rsrq_current = WaveUtils.normalize_rsrq_index(
                 report_after.rsrq_values.get(tower_after_action.id, 0),
                 tower_after_action.radio,
             )
 
-            delta_rsrp = rsrp_after - rsrp_before
-            delta_rsrq = rsrq_after - rsrq_before
+            delta_rsrp = rsrp_current - rsrp_stayed
+            delta_rsrq = rsrq_current - rsrq_stayed
 
             if handover_executed:
                 reward = delta_rsrp + delta_rsrq - handover_penalty
@@ -195,7 +194,7 @@ class HandoverEnv(gym.Env):
                     )
                     for bs in self.current_top_4
                 )
-                reward = (rsrp_after - best_rsrp) + (rsrq_after - best_rsrq)
+                reward = (rsrp_current - best_rsrp) + (rsrq_current - best_rsrq)
 
         else:
             reward = 0.0
