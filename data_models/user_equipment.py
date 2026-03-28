@@ -13,7 +13,7 @@ init(autoreset=True)
 
 class UserEquipment:
 
-    __min_time_of_stay: float = 1.0
+    __min_time_of_stay: float = 2.5
 
     def __init__(
         self,
