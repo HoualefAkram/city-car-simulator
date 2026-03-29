@@ -174,6 +174,7 @@ Simulation parameters are configured in `prepare.py` and `test.py`:
 | `min_epsilon` | `0.05` | Minimum exploration rate |
 | `update_rate` | `200` | Target network hard update interval (training steps) |
 | `batch_size` | `64` | Replay buffer sample size |
+| `min_buffer_size` | `1000` | Minimum experiences before training starts |
 
 ---
 
