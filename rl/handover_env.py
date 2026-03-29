@@ -101,7 +101,12 @@ class HandoverEnv(gym.Env):
         if self.agent.id not in current_fcd_dict:
             # The car reached its destination, Episode terminated.
             obs = self._get_obs()
-            return obs, 0.0, True, False, {"info": "Agent vehicle reached destination."}
+            total_timesteps = len(self.fcd_data)
+            return obs, 0.0, True, False, {
+                "timestep": self.steps,
+                "total_timesteps": total_timesteps,
+                "info": "Agent vehicle reached destination.",
+            }
 
         timestep = current_fcd_dict[self.agent.id].timestep
         tower_before_action = self.agent.serving_bs
