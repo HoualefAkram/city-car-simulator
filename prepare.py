@@ -14,6 +14,7 @@ OSM_DOWNLOAD_PATH = "cache/maps/map.osm"  # cache folder
 SIMULATION_TIME = 300  # (5 minutes)
 STEP_LENGTH = 0.3  # 300 ms
 SEED = 200
+SPAWN_INTERVAL = 10
 
 
 # --- Execution ---
@@ -42,6 +43,7 @@ if __name__ == "__main__":
         end_simulation=SIMULATION_TIME,
         step_length=STEP_LENGTH,
         seed=SEED,
+        spawn_interval=SPAWN_INTERVAL,
     )
     path_gen.run()
 
