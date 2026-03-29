@@ -131,110 +131,113 @@ def simulation(
     )
 
 
-init(autoreset=True)
+if __name__ == "__main__":
+    init(autoreset=True)
 
-print(Fore.CYAN + Style.BRIGHT + f"--- Starting Test ---")
+    print(Fore.CYAN + Style.BRIGHT + f"--- Starting Test ---")
 
-# Base Stations
-bs_list: list[BaseTower] = TowerDownloader.get_towers_from_cache()
+    # Base Stations
+    bs_list: list[BaseTower] = TowerDownloader.get_towers_from_cache()
 
-if not bs_list:
-    error_text = (
-        Fore.RED + Style.BRIGHT + "Error: No base stations found in this area. Exiting."
-    )
-    print(error_text)
-    raise Exception(error_text)
+    if not bs_list:
+        error_text = (
+            Fore.RED
+            + Style.BRIGHT
+            + "Error: No base stations found in this area. Exiting."
+        )
+        print(error_text)
+        raise Exception(error_text)
 
-# Parse Trace and Move Cars
-fcd_data: list[dict[int, CarFcdData]] = FcdParser.parse_fcd_trace()
+    # Parse Trace and Move Cars
+    fcd_data: list[dict[int, CarFcdData]] = FcdParser.parse_fcd_trace()
 
-# ===========================
-# A3 RSRP
-# ===========================
-a3_rsrp_logger = Logger(logdir=LOGDIR, name="A3_RSRP")
-# Initialize User Equipment (Cars)
-num_ue = FcdParser.count_vehicles()
-a3_rsrp_cars: dict[int, UserEquipment] = {
-    i: UserEquipment(
-        id=i,
-        all_bs=bs_list,
-        print_logs_on_movement=False,
-        handover_algorithm=HandoverAlgorithm.A3_RSRP_3GPP,
-    )
-    for i in range(num_ue)
-}
+    # ===========================
+    # A3 RSRP
+    # ===========================
+    a3_rsrp_logger = Logger(logdir=LOGDIR, name="A3_RSRP")
+    # Initialize User Equipment (Cars)
+    num_ue = FcdParser.count_vehicles()
+    a3_rsrp_cars: dict[int, UserEquipment] = {
+        i: UserEquipment(
+            id=i,
+            all_bs=bs_list,
+            print_logs_on_movement=False,
+            handover_algorithm=HandoverAlgorithm.A3_RSRP_3GPP,
+        )
+        for i in range(num_ue)
+    }
 
-print(
-    Fore.CYAN
-    + Style.BRIGHT
-    + f"--- Simulating Movement and Network Logic (A3 RSRP) for {num_ue} Vehicles ---"
-)
-
-simulation(
-    bs_list=bs_list,
-    fcd_data=fcd_data,
-    logger=a3_rsrp_logger,
-    cars=a3_rsrp_cars,
-)
-
-a3_rsrp_logger.close()
-
-# ===========================
-# DDQN
-# ===========================
-
-# Wipe the memory of the towers
-for bs in bs_list:
-    bs.connected_ues.clear()
-
-ddqn_logger = Logger(logdir=LOGDIR, name="DDQN")
-UserEquipment.load_model()
-
-ddqn_cars: dict[int, UserEquipment] = {
-    i: UserEquipment(
-        id=i,
-        all_bs=bs_list,
-        print_logs_on_movement=False,
-        handover_algorithm=HandoverAlgorithm.DDQN_CHO,
-    )
-    for i in range(num_ue)
-}
-
-print(
-    Fore.CYAN
-    + Style.BRIGHT
-    + f"--- Simulating Movement and Network Logic (DDQN) for {num_ue} Vehicles ---"
-)
-
-simulation(bs_list=bs_list, fcd_data=fcd_data, logger=ddqn_logger, cars=ddqn_cars)
-
-ddqn_logger.close()
-
-# ===========================
-# Folium & TensorBoard Outputs
-# ===========================
-
-# Render Final Map
-print(Fore.CYAN + Style.BRIGHT + "--- Rendering Final Output ---")
-Render.render_map(bs_list=bs_list, ue_list=list(a3_rsrp_cars.values()))
-if SHOW_FOLIUM_OUTPUT:
-    webbrowser.open(Path(FOLIUM_OUTPUT).resolve().as_uri())
-
-# Launch TensorBoard
-time.sleep(1)
-if SHOW_TENSORBOARD_OUTPUT:
-    print(Fore.CYAN + Style.BRIGHT + "--- Launching TensorBoard ---")
-    tb_port = 6006
-    tb_process = subprocess.Popen(
-        ["tensorboard", "--logdir", LOGDIR, "--port", str(tb_port)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    time.sleep(5)
-    webbrowser.open(f"http://localhost:{tb_port}")
-
-    print(Fore.GREEN + Style.BRIGHT + "--- Test Done! ---")
     print(
-        Fore.YELLOW
-        + f"TensorBoard running at http://localhost:{tb_port} (PID: {tb_process.pid})"
+        Fore.CYAN
+        + Style.BRIGHT
+        + f"--- Simulating Movement and Network Logic (A3 RSRP) for {num_ue} Vehicles ---"
     )
+
+    simulation(
+        bs_list=bs_list,
+        fcd_data=fcd_data,
+        logger=a3_rsrp_logger,
+        cars=a3_rsrp_cars,
+    )
+
+    a3_rsrp_logger.close()
+
+    # ===========================
+    # DDQN
+    # ===========================
+
+    # Wipe the memory of the towers
+    for bs in bs_list:
+        bs.connected_ues.clear()
+
+    ddqn_logger = Logger(logdir=LOGDIR, name="DDQN")
+    UserEquipment.load_model()
+
+    ddqn_cars: dict[int, UserEquipment] = {
+        i: UserEquipment(
+            id=i,
+            all_bs=bs_list,
+            print_logs_on_movement=False,
+            handover_algorithm=HandoverAlgorithm.DDQN_CHO,
+        )
+        for i in range(num_ue)
+    }
+
+    print(
+        Fore.CYAN
+        + Style.BRIGHT
+        + f"--- Simulating Movement and Network Logic (DDQN) for {num_ue} Vehicles ---"
+    )
+
+    simulation(bs_list=bs_list, fcd_data=fcd_data, logger=ddqn_logger, cars=ddqn_cars)
+
+    ddqn_logger.close()
+
+    # ===========================
+    # Folium & TensorBoard Outputs
+    # ===========================
+
+    # Render Final Map
+    print(Fore.CYAN + Style.BRIGHT + "--- Rendering Final Output ---")
+    Render.render_map(bs_list=bs_list, ue_list=list(a3_rsrp_cars.values()))
+    if SHOW_FOLIUM_OUTPUT:
+        webbrowser.open(Path(FOLIUM_OUTPUT).resolve().as_uri())
+
+    # Launch TensorBoard
+    time.sleep(1)
+    if SHOW_TENSORBOARD_OUTPUT:
+        print(Fore.CYAN + Style.BRIGHT + "--- Launching TensorBoard ---")
+        tb_port = 6006
+        tb_process = subprocess.Popen(
+            ["tensorboard", "--logdir", LOGDIR, "--port", str(tb_port)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        time.sleep(5)
+        webbrowser.open(f"http://localhost:{tb_port}")
+
+        print(Fore.GREEN + Style.BRIGHT + "--- Test Done! ---")
+        print(
+            Fore.YELLOW
+            + f"TensorBoard running at http://localhost:{tb_port} (PID: {tb_process.pid})"
+        )
