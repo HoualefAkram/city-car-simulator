@@ -283,20 +283,23 @@ class UserEquipment:
         # All angles are clockwise, 0 = north, TODO: get angles
         angle_ue = self.angle
 
-        angle_tower1 = ...
-        angle_tower2 = ...
+        tower1_idx, tower1_q = top_2[0]
+        tower2_idx, tower2_q = top_2[1]
+
+        tower1 = top_4_towers[tower1_idx]
+        tower2 = top_4_towers[tower2_idx]
+
+        angle_tower1 = Functions.bearing(pointA=self.latlng, pointB=tower1.latlng)
+        angle_tower2 = Functions.bearing(pointA=self.latlng, pointB=tower2.latlng)
 
         similarity_tower1 = Functions.cos_similarity(angle_ue, angle_tower1)
         similarity_tower2 = Functions.cos_similarity(angle_ue, angle_tower2)
-
-        tower1_q = top_2[0][1]
-        tower2_q = top_2[1][1]
 
         score_tower_1 = Functions.weighted_sum([similarity_tower1, tower1_q], weights)
         score_tower_2 = Functions.weighted_sum([similarity_tower2, tower2_q], weights)
 
         # 6- Decision
-        target_bs_idx = top_2[0][0] if score_tower_1 > score_tower_2 else top_2[1][0]
+        target_bs_idx = tower1_idx if score_tower_1 > score_tower_2 else tower2_idx
         target_bs: BaseTower = top_4_towers[target_bs_idx]
 
         return target_bs
