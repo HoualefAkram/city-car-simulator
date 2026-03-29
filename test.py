@@ -5,7 +5,9 @@ from data_models.base_tower import BaseTower
 from utils.tower_downloader import TowerDownloader
 from utils.render import Render
 from utils.fcd_parser import FcdParser
+from utils.wave_utils import WaveUtils
 from colorama import Fore, Style, init
+import torch
 import webbrowser
 import subprocess
 import time
@@ -262,12 +264,15 @@ if __name__ == "__main__":
     # ===========================
     if TEST_DDQN:
 
-        # Wipe the memory of the towers
+        # Wipe the memory of the towers and fading state
         for bs in bs_list:
             bs.connected_ues.clear()
+        WaveUtils.reset_fading_state()
 
         ddqn_logger = Logger(logdir=LOGDIR, name="DDQN")
-        UserEquipment.load_model()
+        UserEquipment.load_model(
+            map_location="cuda" if torch.cuda.is_available() else "cpu"
+        )
         # Initialize User Equipment (Cars)
         num_ue = FcdParser.count_vehicles()
         ddqn_cars: dict[int, UserEquipment] = {

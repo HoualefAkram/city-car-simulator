@@ -49,7 +49,7 @@ class UserEquipment:
     def load_model(
         cls,
         model_path: str = "outputs/final_ddqn_model.pth",
-        map_location: str = "cuda",
+        map_location: str = "cpu",
     ):
         cls.__model = QNetwork.from_state_dict(
             torch.load(

@@ -203,6 +203,7 @@ class HandoverEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed, options=options)
         self.steps = 0
+        WaveUtils.reset_fading_state()
 
         # Generate new randomized traffic scenario (quick_run has a random seed built in)
         PathGeneration.quick_run(
