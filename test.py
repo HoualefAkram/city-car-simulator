@@ -47,6 +47,11 @@ def simulation(
             flush=True,
             end="",
         )
+
+        rsrps_list = []
+        rsrqs_list = []
+        car_counter = 0
+
         for car_id, car_data in fcd.items():
             if car_id in cars:  # Safe check in case SUMO spawned extra vehicles
                 car = cars[car_id]
@@ -57,10 +62,14 @@ def simulation(
                     angle=car_data.angle,
                 )
 
-                #  Safe check for serving_bs to prevent crashes
                 if car.serving_bs:
                     rsrp = report.rsrp_values.get(car.serving_bs.id, 0)
                     rsrq = report.rsrq_values.get(car.serving_bs.id, 0)
+
+                    rsrps_list.append(rsrp)
+                    rsrqs_list.append(rsrq)
+                    car_counter += 1
+
                     logger.log_ue_metric(
                         ue_index=car.id,
                         metric=Logger.Metric.RSRP,
@@ -92,6 +101,21 @@ def simulation(
                     step=car_data.timestep,
                     value=car.get_pingpong_rate(),
                 )
+
+        avg_rsrp = sum(rsrps_list) / car_counter if car_counter > 0 else 0.0
+        avg_rsrq = sum(rsrqs_list) / car_counter if car_counter > 0 else 0.0
+        current_step = list(fcd.values())[0].timestep
+        logger.log_global_metric(
+            metric=Logger.Metric.AVERAGE_RSRP,
+            value=avg_rsrp,
+            step=current_step,
+        )
+        logger.log_global_metric(
+            metric=Logger.Metric.AVERAGE_RSRQ,
+            value=avg_rsrq,
+            step=current_step,
+        )
+
     print()
 
     # Log global handover summary
