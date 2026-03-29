@@ -196,7 +196,8 @@ if __name__ == "__main__":
 
         ddqn_logger = Logger(logdir=LOGDIR, name="DDQN")
         UserEquipment.load_model()
-
+        # Initialize User Equipment (Cars)
+        num_ue = FcdParser.count_vehicles()
         ddqn_cars: dict[int, UserEquipment] = {
             i: UserEquipment(
                 id=i,
