@@ -23,10 +23,14 @@ class FcdParser:
                 veh_id = int(vehicle.get("id"))
                 lon = float(vehicle.get("x"))
                 lat = float(vehicle.get("y"))
+                angle = float(vehicle.get("angle"))
+                speed = float(vehicle.get("speed"))
                 time = float(timestep.get("time"))
                 snapshot[veh_id] = CarFcdData(
-                    id=veh_id,
+                    car_id=veh_id,
                     latlng=LatLng(lat, lon),
+                    angle=angle,
+                    speed=speed,
                     timestep=time,
                 )
             timesteps.append(snapshot)

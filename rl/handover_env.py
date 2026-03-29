@@ -120,7 +120,7 @@ class HandoverEnv(gym.Env):
         if self.steps < total_timesteps:
             fcds = self.fcd_data[self.steps].values()
             for fcd in fcds:
-                car = self.user_equipments.get(fcd.id)
+                car = self.user_equipments.get(fcd.car_id)
                 if car:
                     # All Cars will initiate the handover after moving using A3_RSRP except the agent (HandoverAlgorithm.NONE)
                     car.move_to(fcd.latlng, timestep=fcd.timestep)

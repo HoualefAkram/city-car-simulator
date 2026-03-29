@@ -205,9 +205,8 @@ class UserEquipment:
         # return None if no reports are generated
         if not self.generated_reports:
             return None
-        # get latest report / timestep
+        # get latest report
         report = self.generated_reports[-1]
-        timestep = report.timestep
         # return best rsrp tower if no tower is connected
         if not self.serving_bs:
             best_bs_id = max(report.rsrp_values, key=report.rsrp_values.get)
@@ -239,7 +238,6 @@ class UserEquipment:
         indexed.sort(key=lambda x: x[1], reverse=True)
         top_2 = indexed[:2]  # [(tower_idx, softmax_val), ...etc]
         # 5- Weighted Sum
-
         # All angles are clockwise, 0 = north, TODO: get angles
         angle_ue = ...
         angle_tower1 = ...
