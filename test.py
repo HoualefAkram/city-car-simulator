@@ -21,7 +21,7 @@ SHOW_TENSORBOARD_OUTPUT = True
 FOLIUM_OUTPUT = "outputs/folium/simulation.html"
 LOGDIR = "outputs/runs"
 TEST_A3_RSRP = True
-TEST_DDQN = True
+TEST_DDQN = False
 
 # --- Execution ---
 
