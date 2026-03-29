@@ -12,7 +12,6 @@ import time
 from pathlib import Path
 from utils.logger import Logger
 
-
 # --- Params ---
 
 SHOW_FOLIUM_OUTPUT = True
@@ -21,6 +20,115 @@ FOLIUM_OUTPUT = "outputs/folium/simulation.html"
 LOGDIR = "outputs/runs"
 
 # --- Execution ---
+
+
+def simulation(
+    logger: Logger,
+    fcd_data: list[dict[int, CarFcdData]],
+    bs_list: list[BaseTower],
+    cars: dict[int, UserEquipment],
+):
+    total_steps = len(fcd_data)
+    start_time = time.time()
+
+    for i in range(total_steps):
+        fcd = fcd_data[i]
+
+        # print
+        percent = (i / total_steps) * 100 if total_steps > 0 else 100
+
+        elapsed_seconds = int(time.time() - start_time)
+        mins, secs = divmod(elapsed_seconds, 60)
+        timer_str = f"{mins:02d}:{secs:02d}"
+        print(
+            f"\r{Fore.CYAN}{Style.BRIGHT}{percent:.0f}% ,{i}/{total_steps} timesteps [Elapsed: {timer_str}]",
+            flush=True,
+            end="",
+        )
+        for car_id, car_data in fcd.items():
+            if car_id in cars:  # Safe check in case SUMO spawned extra vehicles
+                car = cars[car_id]
+                report = car.move_to(
+                    car_data.latlng,
+                    timestep=car_data.timestep,
+                    speed=car_data.speed,
+                    angle=car_data.angle,
+                )
+
+                #  Safe check for serving_bs to prevent crashes
+                if car.serving_bs:
+                    rsrp = report.rsrp_values.get(car.serving_bs.id, 0)
+                    rsrq = report.rsrq_values.get(car.serving_bs.id, 0)
+                    logger.log_ue_metric(
+                        ue_index=car.id,
+                        metric=Logger.Metric.RSRP,
+                        step=car_data.timestep,
+                        value=rsrp,
+                    )
+                    logger.log_ue_metric(
+                        ue_index=car.id,
+                        metric=Logger.Metric.RSRQ,
+                        step=car_data.timestep,
+                        value=rsrq,
+                    )
+
+                logger.log_ue_metric(
+                    ue_index=car.id,
+                    metric=Logger.Metric.TOTAL_HANDOVERS,
+                    step=car_data.timestep,
+                    value=car.get_total_handovers(),
+                )
+                logger.log_ue_metric(
+                    ue_index=car.id,
+                    metric=Logger.Metric.TOTAL_PINGPONG,
+                    step=car_data.timestep,
+                    value=car.get_total_pingpong(),
+                )
+                logger.log_ue_metric(
+                    ue_index=car.id,
+                    metric=Logger.Metric.PINGPONG_RATE,
+                    step=car_data.timestep,
+                    value=car.get_pingpong_rate(),
+                )
+    print()
+
+    # Log global handover summary
+    last_timestep = FcdParser.last_timestep()
+    global_total_handovers = sum(ue.get_total_handovers() for ue in cars.values())
+    global_total_pingpong = sum(ue.get_total_pingpong() for ue in cars.values())
+    global_pingpong_rate = (
+        global_total_pingpong / global_total_handovers
+        if global_total_handovers > 0
+        else 0.0
+    )
+    logger.log_global_metric(
+        metric=Logger.Metric.TOTAL_HANDOVERS,
+        value=global_total_handovers,
+        step=last_timestep,
+    )
+    logger.log_global_metric(
+        metric=Logger.Metric.TOTAL_PINGPONG,
+        value=global_total_pingpong,
+        step=last_timestep,
+    )
+    logger.log_global_metric(
+        metric=Logger.Metric.PINGPONG_RATE,
+        value=global_pingpong_rate,
+        step=last_timestep,
+    )
+
+    for bs in bs_list:
+        print(
+            Fore.BLUE
+            + f"Base Station {bs.id} served UEs: {[ue.id for ue in bs.connected_ues]}"
+        )
+    print(Fore.RED + Style.BRIGHT + f"Global Handovers: {global_total_handovers}")
+    print(Fore.RED + Style.BRIGHT + f"Global Ping Pongs: {global_total_pingpong}")
+    print(
+        Fore.RED
+        + Style.BRIGHT
+        + f"Global Ping Pong rate: {global_pingpong_rate * 100:.2f}%"
+    )
 
 
 init(autoreset=True)
@@ -43,10 +151,10 @@ fcd_data: list[dict[int, CarFcdData]] = FcdParser.parse_fcd_trace()
 # ===========================
 # A3 RSRP
 # ===========================
-logger = Logger(logdir=LOGDIR, name="A3 RSRP")
+a3_rsrp_logger = Logger(logdir=LOGDIR, name="A3 RSRP")
 # Initialize User Equipment (Cars)
 num_ue = FcdParser.count_vehicles()
-cars: dict[int, UserEquipment] = {
+a3_rsrp_cars: dict[int, UserEquipment] = {
     i: UserEquipment(
         id=i,
         all_bs=bs_list,
@@ -59,121 +167,58 @@ cars: dict[int, UserEquipment] = {
 print(
     Fore.CYAN
     + Style.BRIGHT
-    + f"--- Simulating Movement and Network Logic for {num_ue} Vehicles ---"
-)
-total_steps = len(fcd_data)
-start_time = time.time()
-
-for i in range(total_steps):
-    fcd = fcd_data[i]
-
-    # print
-    percent = (i / total_steps) * 100 if total_steps > 0 else 100
-
-    elapsed_seconds = int(time.time() - start_time)
-    mins, secs = divmod(elapsed_seconds, 60)
-    timer_str = f"{mins:02d}:{secs:02d}"
-    print(
-        f"\r{Fore.CYAN}{Style.BRIGHT}{percent:.0f}% ,{i}/{total_steps} timesteps [Elapsed: {timer_str}]",
-        flush=True,
-        end="",
-    )
-    for car_id, car_data in fcd.items():
-        if car_id in cars:  # Safe check in case SUMO spawned extra vehicles
-            car = cars[car_id]
-            report = car.move_to(
-                car_data.latlng,
-                timestep=car_data.timestep,
-                speed=car_data.speed,
-                angle=car_data.angle,
-            )
-            rsrp = report.rsrp_values[car.serving_bs.id]
-            rsrq = report.rsrq_values[car.serving_bs.id]
-            logger.log_ue_metric(
-                ue_index=car.id,
-                metric=Logger.Metric.RSRP,
-                step=car_data.timestep,
-                value=rsrp,
-            )
-            logger.log_ue_metric(
-                ue_index=car.id,
-                metric=Logger.Metric.RSRQ,
-                step=car_data.timestep,
-                value=rsrq,
-            )
-            logger.log_ue_metric(
-                ue_index=car.id,
-                metric=Logger.Metric.TOTAL_HANDOVERS,
-                step=car_data.timestep,
-                value=car.get_total_handovers(),
-            )
-            logger.log_ue_metric(
-                ue_index=car.id,
-                metric=Logger.Metric.TOTAL_PINGPONG,
-                step=car_data.timestep,
-                value=car.get_total_pingpong(),
-            )
-            logger.log_ue_metric(
-                ue_index=car.id,
-                metric=Logger.Metric.PINGPONG_RATE,
-                step=car_data.timestep,
-                value=car.get_pingpong_rate(),
-            )
-print()
-
-# Log global handover summary
-last_timestep = FcdParser.last_timestep()
-global_total_handovers = sum(ue.get_total_handovers() for ue in cars.values())
-global_total_pingpong = sum(ue.get_total_pingpong() for ue in cars.values())
-global_pingpong_rate = (
-    global_total_pingpong / global_total_handovers
-    if global_total_handovers > 0
-    else 0.0
-)
-logger.log_global_metric(
-    metric=Logger.Metric.TOTAL_HANDOVERS,
-    value=global_total_handovers,
-    step=last_timestep,
-)
-logger.log_global_metric(
-    metric=Logger.Metric.TOTAL_PINGPONG,
-    value=global_total_pingpong,
-    step=last_timestep,
-)
-logger.log_global_metric(
-    metric=Logger.Metric.PINGPONG_RATE,
-    value=global_pingpong_rate,
-    step=last_timestep,
+    + f"--- Simulating Movement and Network Logic (A3 RSRP) for {num_ue} Vehicles ---"
 )
 
+simulation(
+    bs_list=bs_list,
+    fcd_data=fcd_data,
+    logger=a3_rsrp_logger,
+    cars=a3_rsrp_cars,
+)
 
-for bs in bs_list:
-    print(
-        Fore.BLUE
-        + f"Base Station {bs.id} served UEs: {[ue.id for ue in bs.connected_ues]}"
-    )
-print(Fore.RED + Style.BRIGHT + f"Global Handovers: {global_total_handovers}")
-print(Fore.RED + Style.BRIGHT + f"Global Ping Pongs: {global_total_pingpong}")
-print(Fore.RED + Style.BRIGHT + f"Global Ping Pong rate: {global_pingpong_rate * 100}%")
+a3_rsrp_logger.close()
 
-logger.close()
 # ===========================
 # DDQN
 # ===========================
-logger = Logger(logdir=LOGDIR, name="DDQN")
+
+# Wipe the memory of the towers
+for bs in bs_list:
+    bs.connected_ues.clear()
+
+ddqn_logger = Logger(logdir=LOGDIR, name="DDQN")
 UserEquipment.load_model()
 
+ddqn_cars: dict[int, UserEquipment] = {
+    i: UserEquipment(
+        id=i,
+        all_bs=bs_list,
+        print_logs_on_movement=False,
+        handover_algorithm=HandoverAlgorithm.DDQN_CHO,
+    )
+    for i in range(num_ue)
+}
 
-logger.close()
+print(
+    Fore.CYAN
+    + Style.BRIGHT
+    + f"--- Simulating Movement and Network Logic (DDQN) for {num_ue} Vehicles ---"
+)
+
+simulation(bs_list=bs_list, fcd_data=fcd_data, logger=ddqn_logger, cars=ddqn_cars)
+
+ddqn_logger.close()
+
 # ===========================
 # Folium & TensorBoard Outputs
 # ===========================
 
 # Render Final Map
 print(Fore.CYAN + Style.BRIGHT + "--- Rendering Final Output ---")
-Render.render_map(bs_list=bs_list, ue_list=list(cars.values()))
+Render.render_map(bs_list=bs_list, ue_list=list(a3_rsrp_cars.values()))
 if SHOW_FOLIUM_OUTPUT:
-    webbrowser.open(Path(FOLIUM_OUTPUT).resolve())
+    webbrowser.open(Path(FOLIUM_OUTPUT).resolve().as_uri())
 
 # Launch TensorBoard
 time.sleep(1)
