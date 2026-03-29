@@ -96,6 +96,7 @@ for episode in range(start_episode, episodes):
     ep_max_q_count = 0
     ep_rsrp_sum = 0.0
     ep_rsrq_sum = 0.0
+    ep_signal_count = 0
 
     while not done:
         state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(device)
@@ -129,6 +130,7 @@ for episode in range(start_episode, episodes):
             serving_id = env.agent.serving_bs.id
             ep_rsrp_sum += last_report.rsrp_values.get(serving_id, 0)
             ep_rsrq_sum += last_report.rsrq_values.get(serving_id, 0)
+            ep_signal_count += 1
 
         # Save to RAM buffer
         memory.append((state, action, reward, new_state, done))
@@ -194,8 +196,8 @@ for episode in range(start_episode, episodes):
     # ----------------------------------------------------
     avg_loss = ep_loss_sum / ep_loss_count if ep_loss_count > 0 else 0.0
     avg_max_q = ep_max_q_sum / ep_max_q_count if ep_max_q_count > 0 else 0.0
-    avg_rsrp = ep_rsrp_sum / step_count if step_count > 0 else 0.0
-    avg_rsrq = ep_rsrq_sum / step_count if step_count > 0 else 0.0
+    avg_rsrp = ep_rsrp_sum / ep_signal_count if ep_signal_count > 0 else 0.0
+    avg_rsrq = ep_rsrq_sum / ep_signal_count if ep_signal_count > 0 else 0.0
 
     # Global Metrics
     tb_logger.log_global_metric(Logger.Metric.TOTAL_REWARD, total_reward, episode)
