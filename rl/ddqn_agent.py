@@ -56,6 +56,7 @@ min_epsilon = 0.05
 gamma = 0.97
 update_rate = 200
 batch_size = 64
+min_buffer_size = 1000
 
 
 criterion = nn.SmoothL1Loss()
@@ -135,7 +136,7 @@ for epoche in range(start_epoch, epoches):
         state = new_state
 
         # Train the network
-        if len(memory) >= batch_size:
+        if len(memory) >= min_buffer_size:
             batch = random.sample(memory.queue, batch_size)
             b_states, b_actions, b_rewards, b_new_states, b_dones = zip(*batch)
 
