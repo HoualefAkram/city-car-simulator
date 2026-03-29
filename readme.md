@@ -40,13 +40,18 @@ city-car-simulator/
 │   ├── latlng.py               # LatLng coordinate dataclass
 │   ├── ng_ran_report.py        # Signal measurement report (UE → BS)
 │   ├── car_fcd_data.py         # SUMO FCD trace data per vehicle
-│   └── handover_algorithm.py   # Enum: A3_RSRP_3GPP, DDQN_CHO
+│   ├── q_network.py            # QNetwork (PyTorch nn.Module) — DDQN policy/target network
+│   └── handover_algorithm.py   # Enum: A3_RSRP_3GPP, DDQN_CHO, NONE
 │
 ├── rl/
 │   ├── handover_env.py         # Gymnasium environment for handover decisions
 │   ├── ddqn_agent.py           # DDQN training loop (main training entry point)
 │   ├── replay_buffer.py        # Experience replay buffer with disk persistence
 │   └── checkpoint_manager.py   # Model checkpointing (epoch, epsilon, networks, optimizer)
+│
+├── helpers/
+│   ├── filters.py              # Top-k tower filtering by combined RSRP/RSRQ score
+│   └── functions.py            # Softmax, cosine similarity, bearing, weighted sum
 │
 ├── utils/
 │   ├── wave_utils.py           # RSRP, RSRQ, RSSI calculations
@@ -58,6 +63,8 @@ city-car-simulator/
 │   ├── render.py               # Folium map visualization
 │   ├── fcd_parser.py           # SUMO FCD XML parser
 │   └── logger.py               # TensorBoard logging (per-UE and global metrics)
+│
+├── sources.md                  # Technical references and design-choice justifications
 │
 ├── cache/
 │   ├── maps/                   # Cached OSM map files
@@ -277,7 +284,8 @@ RSRP(neighbor) > RSRP(serving) + hysteresis
 | Algorithm | Status | Description |
 |---|---|---|
 | `A3_RSRP_3GPP` | Implemented | Standard 3GPP A3 event with hysteresis and TTT |
-| `DDQN_CHO` | In Progress | Deep Double Q-Network for learned handover optimization |
+| `DDQN_CHO` | Implemented | Deep Double Q-Network for learned handover optimization |
+| `NONE` | — | No handover (stay on initial tower) |
 
 ---
 
@@ -285,10 +293,13 @@ RSRP(neighbor) > RSRP(serving) + hysteresis
 
 The project includes a full DDQN training pipeline for learned handover optimization:
 
+- **QNetwork** (`data_models/q_network.py`) — PyTorch `nn.Module` (12 → 256 → 128 → 64 → 4) with GELU activations, hard target-network update, and `from_state_dict` factory
 - **Gymnasium Environment** (`rl/handover_env.py`) — action space: choose 1 of top-4 base stations; observation: 4 normalized RSRP + 4 normalized RSRQ + 4 serving one-hot = 12 features
 - **DDQN Agent** (`rl/ddqn_agent.py`) — Double DQN with experience replay, epsilon-greedy exploration, target network hard updates, and GPU support
 - **Replay Buffer** (`rl/replay_buffer.py`) — persistent experience replay with disk save/load
 - **Checkpoint Manager** (`rl/checkpoint_manager.py`) — saves/resumes training state (epoch, epsilon, networks, optimizer) with cross-device support
+- **Top-k Filtering** (`helpers/filters.py`) — selects the k best candidate towers by weighted RSRP/RSRQ score for the observation space
+- **Helper Functions** (`helpers/functions.py`) — softmax, cosine similarity, bearing calculation, and weighted sum used by the DDQN handover logic
 - **TensorBoard Logger** (`utils/logger.py`) — tracks per-UE signal metrics, episode reward, loss, Q-values, handovers, and ping-pong rate
 
 ### Reward Design
@@ -325,6 +336,9 @@ The reward uses a **counterfactual regret** framework — all signals are compar
 - [x] Shadow fading (Gudmundson correlated log-normal)
 - [x] Fast fading (Rician LOS / Rayleigh NLOS)
 - [x] Radio-specific BS parameters (LTE Band 3 / NR n78)
+- [x] QNetwork architecture (12 → 256 → 128 → 64 → 4, GELU)
+- [x] Top-k tower filtering and direction-aware scoring (helpers module)
+- [x] DDQN handover decision logic in UserEquipment
 - [ ] Trained DDQN agent evaluation vs 3GPP A3 baseline
 
 ---

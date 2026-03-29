@@ -28,14 +28,7 @@ class Functions:
 
     @staticmethod
     def cos_similarity(angle1: float, angle2: float) -> float:
-        """
-        Returns similarity shifted to [0.0, 1.0].
-        1.0 = Driving directly towards
-        0.5 = Perpendicular
-        0.0 = Driving directly away
-        """
-        raw_cos = cos(radians(angle1 - angle2))
-        return (raw_cos + 1.0) / 2.0
+        return cos(radians(angle1 - angle2))
 
     @staticmethod
     def weighted_sum(values: list[float], weights: list[float]):
