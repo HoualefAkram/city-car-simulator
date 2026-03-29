@@ -156,14 +156,15 @@ print(Fore.RED + Style.BRIGHT + f"Global Handovers: {global_total_handovers}")
 print(Fore.RED + Style.BRIGHT + f"Global Ping Pongs: {global_total_pingpong}")
 print(Fore.RED + Style.BRIGHT + f"Global Ping Pong rate: {global_pingpong_rate * 100}%")
 
-
+logger.close()
 # ===========================
 # DDQN
 # ===========================
-
+logger = Logger(logdir=LOGDIR, name="DDQN")
 UserEquipment.load_model()
 
 
+logger.close()
 # ===========================
 # Folium & TensorBoard Outputs
 # ===========================
@@ -175,7 +176,6 @@ if SHOW_FOLIUM_OUTPUT:
     webbrowser.open(Path(FOLIUM_OUTPUT).resolve())
 
 # Launch TensorBoard
-logger.close()
 time.sleep(1)
 if SHOW_TENSORBOARD_OUTPUT:
     print(Fore.CYAN + Style.BRIGHT + "--- Launching TensorBoard ---")
