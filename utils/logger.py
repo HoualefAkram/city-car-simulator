@@ -13,6 +13,8 @@ class Logger:
         AVERAGE_LOSS = "Average_Loss"
         RSRP = "RSRP"
         RSRQ = "RSRQ"
+        AVERAGE_RSRP = "AVERAGE_RSRP"
+        AVERAGE_RSRQ = "AVERAGE_RSRQ"
         EPSILON = "Epsilon"
         TOTAL_HANDOVERS = "Total_Handovers"
         TOTAL_PINGPONG = "Total_Pingpong"

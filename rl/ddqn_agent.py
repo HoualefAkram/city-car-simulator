@@ -214,8 +214,8 @@ for epoche in range(start_epoch, epoches):
     tb_logger.log_ue_metric(
         ue_id, Logger.Metric.PINGPONG_RATE, env.agent.get_pingpong_rate(), epoche
     )
-    tb_logger.log_ue_metric(ue_id, Logger.Metric.RSRP, avg_rsrp, epoche)
-    tb_logger.log_ue_metric(ue_id, Logger.Metric.RSRQ, avg_rsrq, epoche)
+    tb_logger.log_ue_metric(ue_id, Logger.Metric.AVERAGE_RSRP, avg_rsrp, epoche)
+    tb_logger.log_ue_metric(ue_id, Logger.Metric.AVERAGE_RSRQ, avg_rsrq, epoche)
 
     # --- Terminal Output ---
     current_epoch = epoche + 1
