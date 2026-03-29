@@ -247,13 +247,21 @@ class UserEquipment:
             return best_bs
         # 1- Top-4 Filtering
         top_4_towers = Filters.top_k_towers(all_bs=self.all_bs, report=report, k=4)
-        top_4_ids = [tower.id for tower in top_4_towers]
         top_4_rsrp = []
         top_4_rsrq = []
-        for i in range(len(top_4_ids)):
-            bs_id = top_4_ids[i]
-            top_4_rsrp.append(report.rsrp_values.get(bs_id, 0))
-            top_4_rsrq.append(report.rsrq_values.get(bs_id, 0))
+        for bs in top_4_towers:
+            top_4_rsrp.append(
+                WaveUtils.normalize_rsrp_index(
+                    rsrp_index=report.rsrp_values.get(bs.id, 0),
+                    radio_type=bs.radio,
+                )
+            )
+            top_4_rsrq.append(
+                WaveUtils.normalize_rsrq_index(
+                    rsrq_index=report.rsrq_values.get(bs.radio, 0),
+                    radio_type=bs.radio,
+                )
+            )
         # 2- DDQN
         serving_one_hot = [0, 0, 0, 0]
         if self.serving_bs in top_4_towers:
@@ -263,7 +271,8 @@ class UserEquipment:
             [top_4_rsrp, top_4_rsrq, serving_one_hot], dtype=np.float32
         )
         state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-        q_vals = [q.item() for q in self.__model(state_tensor)[0]]
+        with torch.no_grad():
+            q_vals = [q.item() for q in self.__model(state_tensor)[0]]
         # 3- Softmax
         q_vals_softmax: list[float] = Functions.softmax_all(all_values=q_vals)
         # 4- Top 2
