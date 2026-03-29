@@ -7,14 +7,14 @@ class CheckpointManager:
         self.file_path = Path(file_path)
 
     def save_checkpoint(
-        self, epoch: int, epsilon: float, policy_net, target_net, optimizer
+        self, episode: int, epsilon: float, policy_net, target_net, optimizer
     ):
         """Saves the exact state of the networks, optimizer, and training progress."""
         self.file_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Pack everything into a single PyTorch dictionary
         checkpoint = {
-            "epoch": epoch,
+            "episode": episode,
             "epsilon": epsilon,
             "policy_net_state_dict": policy_net.state_dict(),
             "target_net_state_dict": target_net.state_dict(),
@@ -31,7 +31,7 @@ class CheckpointManager:
         device=None,
         default_epsilon: float = 1.0,
     ):
-        """Loads the state into the models/optimizer and returns the current epoch and epsilon."""
+        """Loads the state into the models/optimizer and returns the current episode and epsilon."""
         if self.file_path.exists() and self.file_path.is_file():
             # Load the dictionary back into RAM
             checkpoint = torch.load(self.file_path, map_location=device)
@@ -41,15 +41,15 @@ class CheckpointManager:
             target_net.load_state_dict(checkpoint["target_net_state_dict"])
             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-            start_epoch = (
-                checkpoint["epoch"] + 1
-            )  # +1 so we don't repeat the last saved epoch
+            start_episode = (
+                checkpoint["episode"] + 1
+            )  # +1 so we don't repeat the last saved episode
             epsilon = checkpoint["epsilon"]
 
             print(
-                f"Checkpoint found... Resuming at Epoch {start_epoch} with Epsilon {epsilon:.3f}"
+                f"Checkpoint found... Resuming at Episode {start_episode} with Epsilon {epsilon:.3f}"
             )
-            return start_epoch, epsilon
+            return start_episode, epsilon
         else:
             print("No checkpoint found. Starting a fresh training session.")
             return 0, default_epsilon

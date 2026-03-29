@@ -167,13 +167,14 @@ Simulation parameters are configured in `prepare.py` and `test.py`:
 | Parameter | Default | Description |
 |---|---|---|
 | `USE_GPU` | `True` | Use CUDA GPU if available, `False` to force CPU |
-| `epoches` | `500` | Number of training episodes |
+| `episodes` | `500` | Number of training episodes |
 | `lr` | `5e-4` | Adam learning rate |
 | `gamma` | `0.97` | Discount factor |
-| `decay_val` | `0.99` | Epsilon decay multiplier per epoch |
+| `decay_val` | `0.99` | Epsilon decay multiplier per episode |
 | `min_epsilon` | `0.05` | Minimum exploration rate |
-| `update_rate` | `200` | Target network hard update interval (training steps) |
-| `batch_size` | `64` | Replay buffer sample size |
+| `target_update_episodes` | `2` | Target network hard update interval (episodes) |
+| `train_every` | `20` | Backprop frequency (every N environment steps) |
+| `batch_size` | `256` | Replay buffer sample size |
 | `min_buffer_size` | `1000` | Minimum experiences before training starts |
 
 ---

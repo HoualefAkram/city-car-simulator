@@ -49,13 +49,14 @@ env = HandoverEnv(
     simulation_time=SIMULATION_TIME,
 )
 
-epoches = 500
+episodes = 500
 lr = 5e-4
 decay_val = 0.99
 min_epsilon = 0.05
 gamma = 0.97
-update_rate = 200
-batch_size = 64
+target_update_episodes = 2
+train_every = 20
+batch_size = 256
 min_buffer_size = 1000
 
 
@@ -68,7 +69,7 @@ tb_logger = Logger(
     logdir="outputs/runs", name="Training"
 )  # Initialize TensorBoard Writer
 
-start_epoch, epsilon = checkpoint_manager.load_checkpoint(
+start_episode, epsilon = checkpoint_manager.load_checkpoint(
     policy_network, target_network, adam, device=device, default_epsilon=1.0
 )
 
@@ -76,15 +77,13 @@ start_epoch, epsilon = checkpoint_manager.load_checkpoint(
 # 3. TRAINING LOOP
 # ==========================================
 
-counter = 0
-
 print(f"--- Starting DDQN Training on {device} ---")
 # To view your graphs, open a new terminal and run: tensorboard --logdir=outputs/runs
 print(
     "TensorBoard is active! Run 'tensorboard --logdir=outputs/runs' to view progress."
 )
 
-for epoche in range(start_epoch, epoches):
+for episode in range(start_episode, episodes):
     done = False
     state, _ = env.reset()
 
@@ -136,7 +135,7 @@ for epoche in range(start_epoch, epoches):
         state = new_state
 
         # Train the network
-        if len(memory) >= min_buffer_size:
+        if len(memory) >= min_buffer_size and step_count % train_every == 0:
             batch = random.sample(memory.queue, batch_size)
             b_states, b_actions, b_rewards, b_new_states, b_dones = zip(*batch)
 
@@ -175,10 +174,11 @@ for epoche in range(start_epoch, epoches):
             ep_loss_sum += loss.item()
             ep_loss_count += 1
 
-            counter += 1
-            if counter >= update_rate:
-                counter = 0
-                target_network.hard_update(network=policy_network)
+
+
+    # Hard update target network every N episodes
+    if (episode + 1) % target_update_episodes == 0:
+        target_network.hard_update(network=policy_network)
 
     # Decay Epsilon
     epsilon = max(min_epsilon, epsilon * decay_val)
@@ -186,11 +186,11 @@ for epoche in range(start_epoch, epoches):
     # Save State
     memory.save()
     checkpoint_manager.save_checkpoint(
-        epoche, epsilon, policy_network, target_network, adam
+        episode, epsilon, policy_network, target_network, adam
     )
 
     # ----------------------------------------------------
-    # TENSORBOARD LOGGING (End of Epoch)
+    # TENSORBOARD LOGGING (End of Episode)
     # ----------------------------------------------------
     avg_loss = ep_loss_sum / ep_loss_count if ep_loss_count > 0 else 0.0
     avg_max_q = ep_max_q_sum / ep_max_q_count if ep_max_q_count > 0 else 0.0
@@ -198,32 +198,32 @@ for epoche in range(start_epoch, epoches):
     avg_rsrq = ep_rsrq_sum / step_count if step_count > 0 else 0.0
 
     # Global Metrics
-    tb_logger.log_global_metric(Logger.Metric.TOTAL_REWARD, total_reward, epoche)
-    tb_logger.log_global_metric(Logger.Metric.EPISODE_LENGTH, step_count, epoche)
-    tb_logger.log_global_metric(Logger.Metric.EPSILON, epsilon, epoche)
-    tb_logger.log_global_metric(Logger.Metric.AVERAGE_LOSS, avg_loss, epoche)
-    tb_logger.log_global_metric(Logger.Metric.AVERAGE_MAX_Q, avg_max_q, epoche)
+    tb_logger.log_global_metric(Logger.Metric.TOTAL_REWARD, total_reward, episode)
+    tb_logger.log_global_metric(Logger.Metric.EPISODE_LENGTH, step_count, episode)
+    tb_logger.log_global_metric(Logger.Metric.EPSILON, epsilon, episode)
+    tb_logger.log_global_metric(Logger.Metric.AVERAGE_LOSS, avg_loss, episode)
+    tb_logger.log_global_metric(Logger.Metric.AVERAGE_MAX_Q, avg_max_q, episode)
 
     # UE Specific Metrics
     ue_id = env.agent.id
     tb_logger.log_ue_metric(
-        ue_id, Logger.Metric.TOTAL_HANDOVERS, env.agent.get_total_handovers(), epoche
+        ue_id, Logger.Metric.TOTAL_HANDOVERS, env.agent.get_total_handovers(), episode
     )
     tb_logger.log_ue_metric(
-        ue_id, Logger.Metric.TOTAL_PINGPONG, env.agent.get_total_pingpong(), epoche
+        ue_id, Logger.Metric.TOTAL_PINGPONG, env.agent.get_total_pingpong(), episode
     )
     tb_logger.log_ue_metric(
-        ue_id, Logger.Metric.PINGPONG_RATE, env.agent.get_pingpong_rate(), epoche
+        ue_id, Logger.Metric.PINGPONG_RATE, env.agent.get_pingpong_rate(), episode
     )
-    tb_logger.log_ue_metric(ue_id, Logger.Metric.AVERAGE_RSRP, avg_rsrp, epoche)
-    tb_logger.log_ue_metric(ue_id, Logger.Metric.AVERAGE_RSRQ, avg_rsrq, epoche)
+    tb_logger.log_ue_metric(ue_id, Logger.Metric.AVERAGE_RSRP, avg_rsrp, episode)
+    tb_logger.log_ue_metric(ue_id, Logger.Metric.AVERAGE_RSRQ, avg_rsrq, episode)
 
     # --- Terminal Output ---
-    current_epoch = epoche + 1
-    percent_complete = (current_epoch / epoches) * 100
+    current_episode = episode + 1
+    percent_complete = (current_episode / episodes) * 100
 
     print(
-        f"{Fore.CYAN}{Style.BRIGHT}Epoch {current_epoch}/{epoches} "
+        f"{Fore.CYAN}{Style.BRIGHT}Episode {current_episode}/{episodes} "
         f"{Fore.YELLOW}[{percent_complete:.1f}%] "
         f"{Fore.GREEN}| Reward: {total_reward:.2f} "
         f"{Fore.WHITE}| Loss: {avg_loss:.4f} "
