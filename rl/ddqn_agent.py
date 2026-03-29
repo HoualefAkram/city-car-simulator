@@ -56,7 +56,7 @@ min_epsilon = 0.05
 gamma = 0.97
 target_update_episodes = 2
 train_every = 20
-batch_size = 256
+batch_size = 64
 min_buffer_size = 1000
 
 
@@ -175,8 +175,6 @@ for episode in range(start_episode, episodes):
             # Track Loss for TensorBoard
             ep_loss_sum += loss.item()
             ep_loss_count += 1
-
-
 
     # Hard update target network every N episodes
     if (episode + 1) % target_update_episodes == 0:
