@@ -258,7 +258,7 @@ class UserEquipment:
             )
             top_4_rsrq.append(
                 WaveUtils.normalize_rsrq_index(
-                    rsrq_index=report.rsrq_values.get(bs.radio, 0),
+                    rsrq_index=report.rsrq_values.get(bs.id, 0),
                     radio_type=bs.radio,
                 )
             )
