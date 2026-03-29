@@ -44,8 +44,17 @@ class UserEquipment:
         self.handover_algorithm = handover_algorithm
 
     @classmethod
-    def load_model(cls, model_path: str = "outputs/final_ddqn_model.pth"):
-        cls.__model = QNetwork.from_state_dict(torch.load(model_path)).eval()
+    def load_model(
+        cls,
+        model_path: str = "outputs/final_ddqn_model.pth",
+        map_location: str = "cuda",
+    ):
+        cls.__model = QNetwork.from_state_dict(
+            torch.load(
+                model_path,
+                map_location=map_location,
+            )
+        ).eval()
 
     def __repr__(self):
         return f"UserEquipment(id: {self.id}, latlng: {self.latlng}, serving_bs: {self.serving_bs.id if self.serving_bs else None})"
@@ -222,7 +231,7 @@ class UserEquipment:
             [top_4_rsrp, top_4_rsrq, serving_one_hot], dtype=np.float32
         )
         state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-        q_vals: list[float] = [q.item() for q in self.__model(state_tensor)]
+        q_vals = [q.item() for q in self.__model(state_tensor)[0]]
         # 3- Softmax
         q_vals_softmax: list[float] = Functions.softmax_all(all_values=q_vals)
         # 4- Top 2

@@ -1,4 +1,4 @@
-from math import exp, cos
+from math import exp, cos, radians
 
 
 class Functions:
@@ -22,7 +22,7 @@ class Functions:
 
     @staticmethod
     def cos_similarity(angle1: float, angle2: float):
-        return cos(angle1 - angle2)
+        return cos(radians(angle1 - angle2))
 
     @staticmethod
     def weighted_sum(values: list[float], weights: list[float]):
@@ -30,3 +30,4 @@ class Functions:
         s = 0
         for i in range(len(values)):
             s += values[i] * weights[i]
+        return s
