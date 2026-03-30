@@ -9,7 +9,6 @@ from data_models.q_network import QNetwork
 
 init(autoreset=True)
 # --- Custom Imports ---
-from data_models.latlng import LatLng
 from rl.handover_env import HandoverEnv
 from rl.replay_buffer import ReplayBuffer
 from rl.checkpoint_manager import CheckpointManager

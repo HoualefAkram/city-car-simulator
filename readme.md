@@ -151,8 +151,8 @@ Simulation parameters are configured in `prepare.py` and `test.py`. The default 
 
 | Parameter | Default | Description |
 |---|---|---|
-| `MAP_TOP_LEFT` | `(52.040089, -0.774654)` | NW corner of simulation area (UK) |
-| `MAP_BOTTOM_RIGHT` | `(52.035549, -0.735773)` | SE corner of simulation area |
+| `MAP_TOP_LEFT` | `(52.049042, -0.780256)` | NW corner of simulation area (UK) |
+| `MAP_BOTTOM_RIGHT` | `(52.029144, -0.733949)` | SE corner of simulation area |
 | `MCC` | `234` | Mobile Country Code (UK) |
 | `SEED` | `42` | Random seed for reproducible SUMO traffic |
 | `SIMULATION_TIME` | `300` | Simulation duration in seconds (5 minutes) |
@@ -161,21 +161,21 @@ Simulation parameters are configured in `prepare.py` and `test.py`. The default 
 | `SHOW_FOLIUM_OUTPUT` | `True` | Auto-open HTML output in browser (`test.py`) |
 | `SHOW_TENSORBOARD_OUTPUT` | `True` | Auto-launch TensorBoard (`test.py`) |
 | `TEST_A3_RSRP` | `True` | Run 3GPP A3 RSRP baseline simulation (`test.py`) |
-| `TEST_DDQN` | `False` | Run DDQN handover simulation (`test.py`) |
+| `TEST_DDQN` | `True` | Run DDQN handover simulation (`test.py`) |
 
 ### Training Hyperparameters (`rl/ddqn_agent.py`)
 
 | Parameter | Default | Description |
 |---|---|---|
 | `USE_GPU` | `True` | Use CUDA GPU if available, `False` to force CPU |
-| `episodes` | `500` | Number of training episodes |
+| `episodes` | `700` | Number of training episodes |
 | `lr` | `5e-4` | Adam learning rate |
 | `gamma` | `0.97` | Discount factor |
 | `decay_val` | `0.99` | Epsilon decay multiplier per episode |
 | `min_epsilon` | `0.05` | Minimum exploration rate |
 | `target_update_episodes` | `2` | Target network hard update interval (episodes) |
 | `train_every` | `20` | Backprop frequency (every N environment steps) |
-| `batch_size` | `64` | Replay buffer sample size |
+| `batch_size` | `128` | Replay buffer sample size |
 | `min_buffer_size` | `1000` | Minimum experiences before training starts |
 
 ---
@@ -299,8 +299,8 @@ RSRP(neighbor) > RSRP(serving) + hysteresis
 
 The project includes a full DDQN training pipeline for learned handover optimization:
 
-- **QNetwork** (`data_models/q_network.py`) — PyTorch `nn.Module` (12 → 256 → 128 → 64 → 4) with GELU activations, hard target-network update, and `from_state_dict` factory
-- **Gymnasium Environment** (`rl/handover_env.py`) — action space: choose 1 of top-4 base stations; observation: 4 normalized RSRP + 4 normalized RSRQ + 4 serving one-hot = 12 features
+- **QNetwork** (`data_models/q_network.py`) — PyTorch `nn.Module` (13 → 256 → 128 → 64 → 4) with GELU activations, hard target-network update, and `from_state_dict` factory
+- **Gymnasium Environment** (`rl/handover_env.py`) — action space: choose 1 of top-4 base stations; observation: 4 normalized RSRP + 4 normalized RSRQ + 4 serving one-hot + 1 normalized speed = 13 features
 - **DDQN Agent** (`rl/ddqn_agent.py`) — Double DQN with experience replay, epsilon-greedy exploration, target network hard updates, and GPU support
 - **Replay Buffer** (`rl/replay_buffer.py`) — persistent experience replay with disk save/load
 - **Checkpoint Manager** (`rl/checkpoint_manager.py`) — saves/resumes training state (epoch, epsilon, networks, optimizer) with cross-device support
@@ -310,13 +310,14 @@ The project includes a full DDQN training pipeline for learned handover optimiza
 
 ### Reward Design
 
-The reward uses a **counterfactual regret** framework — all signals are compared at the same physical position using the latest measurement report:
+The reward uses a **counterfactual delta** framework — signals from the old and new tower are compared at the same physical position using the latest measurement report:
 
 | Scenario | Reward |
 |---|---|
 | Handover executed | `rsrp(new_tower) - rsrp(old_tower) + rsrq(new_tower) - rsrq(old_tower) - penalty` |
-| Stay on best tower | `0.0` (optimal — no regret) |
-| Stay on suboptimal tower | `(rsrp(current) - rsrp(best)) + (rsrq(current) - rsrq(best))` (negative regret) |
+| Stay (no handover) | `0.0` |
+
+The agent is only rewarded/penalized for handover decisions. Staying incurs no cost, so the agent only switches when the signal improvement exceeds the handover penalty (`0.2`). This acts as a learned hysteresis, reducing unnecessary ping-pong handovers.
 
 ---
 
@@ -368,7 +369,8 @@ The reward uses a **counterfactual regret** framework — all signals are compar
 - [x] TensorBoard metric logging
 - [x] Separated data preparation and simulation scripts
 - [x] DDQN agent with full training loop
-- [x] Gymnasium handover environment (top-4 filtering, counterfactual reward)
+- [x] Gymnasium handover environment (top-4 filtering, counterfactual delta reward)
+- [x] Speed-aware observation space (network-side UE speed estimation)
 - [x] Experience replay with disk persistence
 - [x] Checkpoint save/resume
 - [x] GPU support (CUDA)
@@ -376,9 +378,10 @@ The reward uses a **counterfactual regret** framework — all signals are compar
 - [x] Shadow fading (Gudmundson correlated log-normal)
 - [x] Fast fading (Rician LOS / Rayleigh NLOS)
 - [x] Radio-specific BS parameters (LTE Band 3 / NR n78)
-- [x] QNetwork architecture (12 → 256 → 128 → 64 → 4, GELU)
+- [x] QNetwork architecture (13 → 256 → 128 → 64 → 4, GELU)
 - [x] Top-k tower filtering and direction-aware scoring (helpers module)
 - [x] DDQN handover decision logic in UserEquipment
+- [x] Conditional Handover (CHO) post-processing — UE-side bearing/cosine similarity re-ranking
 - [ ] Trained DDQN agent evaluation vs 3GPP A3 baseline
 
 ---
