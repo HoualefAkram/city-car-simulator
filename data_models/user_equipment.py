@@ -269,16 +269,8 @@ class UserEquipment:
             serving_one_hot[serving_position] = 1
         # speed (normalized to [0, 1], assuming max ~30 m/s)
         norm_speed = min(self.speed / 30.0, 1.0)
-        # cosine similarity between UE bearing and direction to each top-4 tower
-        cos_sims = [
-            Functions.cos_similarity(
-                self.angle,
-                Functions.bearing(pointA=self.latlng, pointB=bs.latlng),
-            )
-            for bs in top_4_towers
-        ]
         state = np.concatenate(
-            [top_4_rsrp, top_4_rsrq, serving_one_hot, [norm_speed], cos_sims],
+            [top_4_rsrp, top_4_rsrq, serving_one_hot, [norm_speed]],
             dtype=np.float32,
         )
         state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)

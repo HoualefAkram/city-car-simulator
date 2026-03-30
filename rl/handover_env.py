@@ -7,7 +7,6 @@ from data_models.handover_algorithm import HandoverAlgorithm
 from data_models.ng_ran_report import NGRANReport
 from data_models.user_equipment import UserEquipment
 from helpers.filters import Filters
-from helpers.functions import Functions
 from utils.fcd_parser import FcdParser
 from utils.map_downloader import MapDownloader
 from utils.path_gen import PathGeneration
@@ -48,7 +47,7 @@ class HandoverEnv(gym.Env):
         # action space: choosing 1 of 4 BS
         self.action_space = Discrete(4)
         # observation Space
-        self.observation_space = Box(low=-1.0, high=1.0, shape=(17,), dtype=np.float32)
+        self.observation_space = Box(low=0.0, high=1.0, shape=(13,), dtype=np.float32)
         self.step_len = step_len
         self.simulation_time = simulation_time
 
@@ -90,16 +89,8 @@ class HandoverEnv(gym.Env):
             serving_one_hot[serving_position] = 1
         # speed (normalized to [0, 1], assuming max ~30 m/s)
         norm_speed = min(self.agent.speed / 30.0, 1.0)
-        # cosine similarity between UE bearing and direction to each top-4 tower
-        cos_sims = [
-            Functions.cos_similarity(
-                self.agent.angle,
-                Functions.bearing(pointA=self.agent.latlng, pointB=bs.latlng),
-            )
-            for bs in self.current_top_4
-        ]
         obs = np.concatenate(
-            [rsrp_list, rsrq_list, serving_one_hot, [norm_speed], cos_sims],
+            [rsrp_list, rsrq_list, serving_one_hot, [norm_speed]],
             dtype=np.float32,
         )
         return obs
