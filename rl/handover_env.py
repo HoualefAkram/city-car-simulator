@@ -7,6 +7,7 @@ from data_models.handover_algorithm import HandoverAlgorithm
 from data_models.ng_ran_report import NGRANReport
 from data_models.user_equipment import UserEquipment
 from helpers.filters import Filters
+from helpers.functions import Functions
 from utils.fcd_parser import FcdParser
 from utils.map_downloader import MapDownloader
 from utils.path_gen import PathGeneration
@@ -47,7 +48,7 @@ class HandoverEnv(gym.Env):
         # action space: choosing 1 of 4 BS
         self.action_space = Discrete(4)
         # observation Space
-        self.observation_space = Box(low=0.0, high=1.0, shape=(12,), dtype=np.float32)
+        self.observation_space = Box(low=-1.0, high=1.0, shape=(17,), dtype=np.float32)
         self.step_len = step_len
         self.simulation_time = simulation_time
 
@@ -87,8 +88,20 @@ class HandoverEnv(gym.Env):
         if self.agent.serving_bs in self.current_top_4:
             serving_position = self.current_top_4.index(self.agent.serving_bs)
             serving_one_hot[serving_position] = 1
-        # observation, serving_one_hot will be [0,0,0,0] if ue is not connected to any tower
-        obs = np.concatenate([rsrp_list, rsrq_list, serving_one_hot], dtype=np.float32)
+        # speed (normalized to [0, 1], assuming max ~30 m/s)
+        norm_speed = min(self.agent.speed / 30.0, 1.0)
+        # cosine similarity between UE bearing and direction to each top-4 tower
+        cos_sims = [
+            Functions.cos_similarity(
+                self.agent.angle,
+                Functions.bearing(pointA=self.agent.latlng, pointB=bs.latlng),
+            )
+            for bs in self.current_top_4
+        ]
+        obs = np.concatenate(
+            [rsrp_list, rsrq_list, serving_one_hot, [norm_speed], cos_sims],
+            dtype=np.float32,
+        )
         return obs
 
     def step(self, action):
@@ -174,22 +187,7 @@ class HandoverEnv(gym.Env):
             if handover_executed:
                 reward = delta_rsrp + delta_rsrq - handover_penalty
             else:
-                # Did we ignore the better tower?
-                # Handover wasnt executed, this means tower_before_action = tower_after_action, Check the state if the user missed any opportunities
-                # check what was in the top-4 towers, get the best one and use it to punish staying on a worse tower
-                best_rsrp = max(
-                    WaveUtils.normalize_rsrp_index(
-                        report_after.rsrp_values.get(bs.id, 0), bs.radio
-                    )
-                    for bs in self.current_top_4
-                )
-                best_rsrq = max(
-                    WaveUtils.normalize_rsrq_index(
-                        report_after.rsrq_values.get(bs.id, 0), bs.radio
-                    )
-                    for bs in self.current_top_4
-                )
-                reward = (rsrp_current - best_rsrp) + (rsrq_current - best_rsrq)
+                reward = 0.0
 
         else:
             reward = 0.0

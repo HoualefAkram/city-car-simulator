@@ -49,14 +49,14 @@ env = HandoverEnv(
     simulation_time=SIMULATION_TIME,
 )
 
-episodes = 500
+episodes = 700
 lr = 5e-4
 decay_val = 0.99
 min_epsilon = 0.05
 gamma = 0.97
 target_update_episodes = 2
 train_every = 20
-batch_size = 64
+batch_size = 128
 min_buffer_size = 1000
 
 
