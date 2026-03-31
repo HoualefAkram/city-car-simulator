@@ -18,7 +18,7 @@ init(autoreset=True)
 
 class UserEquipment:
 
-    __min_time_of_stay: float = 2.5
+    min_time_of_stay: float = 2.5
     __model = None
 
     def __init__(
@@ -87,7 +87,7 @@ class UserEquipment:
             bs_return, t_left_b = history[i + 2]
             if bs_a == bs_return and bs_a != bs_b:
                 time_on_b = t_left_b - t_arrived_b
-                if time_on_b < self.__min_time_of_stay:
+                if time_on_b < self.min_time_of_stay:
                     count += 1
         return count
 

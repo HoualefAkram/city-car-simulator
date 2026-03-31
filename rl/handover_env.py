@@ -100,17 +100,40 @@ class HandoverEnv(gym.Env):
         # Reset() guarantees current_top_4 is populated
         target_bs = self.current_top_4[action]
         # NOTE: increase to reduce pingpong, reduce to improve RSRP/RSRQ
-        handover_penalty = 0.2
+        base_penalty = 0.2
+        cooldown_penalty = 0.3
+        min_time_of_stay = UserEquipment.min_time_of_stay
+
+        # Dynamic penalty: higher if switching too soon after the last handover
+        handover_penalty = base_penalty
+        if len(self.agent.connection_history) >= 2:
+            _, last_handover_time = self.agent.connection_history[-1]
+            time_since = (
+                self.fcd_data[self.steps][self.agent.id].timestep - last_handover_time
+                if self.agent.id in self.fcd_data[self.steps]
+                else min_time_of_stay
+            )
+            if time_since < min_time_of_stay:
+                handover_penalty = base_penalty + cooldown_penalty * (
+                    1 - time_since / min_time_of_stay
+                )
+
         current_fcd_dict: dict[int, CarFcdData] = self.fcd_data[self.steps]
         if self.agent.id not in current_fcd_dict:
             # The car reached its destination, Episode terminated.
             obs = self._get_obs()
             total_timesteps = len(self.fcd_data)
-            return obs, 0.0, True, False, {
-                "timestep": self.steps,
-                "total_timesteps": total_timesteps,
-                "info": "Agent vehicle reached destination.",
-            }
+            return (
+                obs,
+                0.0,
+                True,
+                False,
+                {
+                    "timestep": self.steps,
+                    "total_timesteps": total_timesteps,
+                    "info": "Agent vehicle reached destination.",
+                },
+            )
 
         timestep = current_fcd_dict[self.agent.id].timestep
         tower_before_action = self.agent.serving_bs
