@@ -89,7 +89,7 @@ class HandoverEnv(gym.Env):
             serving_one_hot[serving_position] = 1
         # speed (normalized to [0, 1], assuming max ~30 m/s)
         norm_speed = min(self.agent.speed / 30.0, 1.0)
-        time_since_ho = self.agent.get_time_since_last_handover(
+        time_since_ho = self.agent.get_normalized_time_since_last_handover(
             self.agent.generated_reports[-1].timestep
         )
         obs = np.concatenate(
@@ -109,7 +109,7 @@ class HandoverEnv(gym.Env):
         # Dynamic penalty: higher if switching too soon after the last handover
         current_fcd = self.fcd_data[self.steps]
         current_timestep = current_fcd[self.agent.id].timestep if self.agent.id in current_fcd else 0.0
-        time_since_ho = self.agent.get_time_since_last_handover(current_timestep)
+        time_since_ho = self.agent.get_normalized_time_since_last_handover(current_timestep)
         # time_since_ho is 0..1 where 0 = just switched, 1 = fully cooled down
         handover_penalty = base_penalty + cooldown_penalty * (1 - time_since_ho)
 
