@@ -222,7 +222,7 @@ for episode in range(start_episode, episodes):
     percent_complete = (current_episode / episodes) * 100
 
     print(
-        f"{Fore.CYAN}{Style.BRIGHT}Episode {current_episode}/{episodes} "
+        f"\n{Fore.CYAN}{Style.BRIGHT}Episode {current_episode}/{episodes} "
         f"{Fore.YELLOW}[{percent_complete:.1f}%] "
         f"{Fore.GREEN}| Reward: {total_reward:.2f} "
         f"{Fore.WHITE}| Loss: {avg_loss:.4f} "
