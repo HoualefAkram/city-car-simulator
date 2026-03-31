@@ -168,7 +168,7 @@ Simulation parameters are configured in `prepare.py` and `test.py`. The default 
 | Parameter | Default | Description |
 |---|---|---|
 | `USE_GPU` | `True` | Use CUDA GPU if available, `False` to force CPU |
-| `episodes` | `700` | Number of training episodes |
+| `episodes` | `1000` | Number of training episodes |
 | `lr` | `5e-4` | Adam learning rate |
 | `gamma` | `0.97` | Discount factor |
 | `decay_val` | `0.99` | Epsilon decay multiplier per episode |
@@ -299,8 +299,8 @@ RSRP(neighbor) > RSRP(serving) + hysteresis
 
 The project includes a full DDQN training pipeline for learned handover optimization:
 
-- **QNetwork** (`data_models/q_network.py`) — PyTorch `nn.Module` (13 → 256 → 128 → 64 → 4) with GELU activations, hard target-network update, and `from_state_dict` factory
-- **Gymnasium Environment** (`rl/handover_env.py`) — action space: choose 1 of top-4 base stations; observation: 4 normalized RSRP + 4 normalized RSRQ + 4 serving one-hot + 1 normalized speed = 13 features
+- **QNetwork** (`data_models/q_network.py`) — PyTorch `nn.Module` (14 → 256 → 128 → 64 → 4) with GELU activations, hard target-network update, and `from_state_dict` factory
+- **Gymnasium Environment** (`rl/handover_env.py`) — action space: choose 1 of top-4 base stations; observation: 4 normalized RSRP + 4 normalized RSRQ + 4 serving one-hot + 1 normalized speed + 1 normalized time since last handover = 14 features
 - **DDQN Agent** (`rl/ddqn_agent.py`) — Double DQN with experience replay, epsilon-greedy exploration, target network hard updates, and GPU support
 - **Replay Buffer** (`rl/replay_buffer.py`) — persistent experience replay with disk save/load
 - **Checkpoint Manager** (`rl/checkpoint_manager.py`) — saves/resumes training state (epoch, epsilon, networks, optimizer) with cross-device support
@@ -314,10 +314,26 @@ The reward uses a **counterfactual delta** framework — signals from the old an
 
 | Scenario | Reward |
 |---|---|
-| Handover executed | `rsrp(new_tower) - rsrp(old_tower) + rsrq(new_tower) - rsrq(old_tower) - penalty` |
+| Handover executed | `rsrp(new_tower) - rsrp(old_tower) + rsrq(new_tower) - rsrq(old_tower) - dynamic_penalty` |
 | Stay (no handover) | `0.0` |
 
-The agent is only rewarded/penalized for handover decisions. Staying incurs no cost, so the agent only switches when the signal improvement exceeds the handover penalty (`0.2`). This acts as a learned hysteresis, reducing unnecessary ping-pong handovers.
+The agent is only rewarded/penalized for handover decisions. Staying incurs no cost, so the agent only switches when the signal improvement exceeds the handover penalty. This acts as a learned hysteresis, reducing unnecessary ping-pong handovers.
+
+#### Dynamic Handover Penalty (Cooldown)
+
+The handover penalty scales based on time since the last handover, penalizing rapid switching more heavily:
+
+```
+penalty = base_penalty + cooldown_penalty * (1 - time_since_ho / min_time_of_stay)
+```
+
+| Parameter | Value | Description |
+|---|---|---|
+| `base_penalty` | `0.2` | Minimum penalty for any handover |
+| `cooldown_penalty` | `0.3` | Additional penalty that decays with time |
+| `min_time_of_stay` | `2.5 s` | Cooldown period before penalty returns to base |
+
+This produces a penalty range of `0.2` (cooled down) to `0.5` (immediate re-switch), directly discouraging ping-pong handovers while allowing justified handovers after the cooldown.
 
 ---
 
@@ -371,6 +387,8 @@ The agent is only rewarded/penalized for handover decisions. Staying incurs no c
 - [x] DDQN agent with full training loop
 - [x] Gymnasium handover environment (top-4 filtering, counterfactual delta reward)
 - [x] Speed-aware observation space (network-side UE speed estimation)
+- [x] Time-since-handover observation feature (handover cooldown awareness)
+- [x] Dynamic handover penalty (cooldown-based, anti-ping-pong)
 - [x] Experience replay with disk persistence
 - [x] Checkpoint save/resume
 - [x] GPU support (CUDA)
@@ -378,7 +396,7 @@ The agent is only rewarded/penalized for handover decisions. Staying incurs no c
 - [x] Shadow fading (Gudmundson correlated log-normal)
 - [x] Fast fading (Rician LOS / Rayleigh NLOS)
 - [x] Radio-specific BS parameters (LTE Band 3 / NR n78)
-- [x] QNetwork architecture (13 → 256 → 128 → 64 → 4, GELU)
+- [x] QNetwork architecture (14 → 256 → 128 → 64 → 4, GELU)
 - [x] Top-k tower filtering and direction-aware scoring (helpers module)
 - [x] DDQN handover decision logic in UserEquipment
 - [x] Conditional Handover (CHO) post-processing — UE-side bearing/cosine similarity re-ranking

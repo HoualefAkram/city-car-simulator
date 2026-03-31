@@ -102,14 +102,17 @@ class HandoverEnv(gym.Env):
         """Execute the action Handover/No Handover then move all the cars once"""
         # Reset() guarantees current_top_4 is populated
         target_bs = self.current_top_4[action]
-        # NOTE: increase to reduce pingpong, reduce to improve RSRP/RSRQ
         base_penalty = 0.2
         cooldown_penalty = 0.3
 
         # Dynamic penalty: higher if switching too soon after the last handover
         current_fcd = self.fcd_data[self.steps]
-        current_timestep = current_fcd[self.agent.id].timestep if self.agent.id in current_fcd else 0.0
-        time_since_ho = self.agent.get_normalized_time_since_last_handover(current_timestep)
+        current_timestep = (
+            current_fcd[self.agent.id].timestep if self.agent.id in current_fcd else 0.0
+        )
+        time_since_ho = self.agent.get_normalized_time_since_last_handover(
+            current_timestep
+        )
         # time_since_ho is 0..1 where 0 = just switched, 1 = fully cooled down
         handover_penalty = base_penalty + cooldown_penalty * (1 - time_since_ho)
 
