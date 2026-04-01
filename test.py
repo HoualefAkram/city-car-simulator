@@ -55,6 +55,8 @@ def simulation(
         system_handovers = []
         system_pingpongs = []
         system_pingpongs_rate = []
+        system_rlf = []
+        system_dho = []
         car_counter = 0
 
         for car_id, car_data in fcd.items():
@@ -73,12 +75,16 @@ def simulation(
                     car_handovers = car.get_total_handovers()
                     car_pingpongs = car.get_total_pingpong()
                     car_pingpongs_rate = car.get_pingpong_rate()
+                    car_rlf = car.rlf_count
+                    car_dho_time = car.dho_time
 
                     system_rsrps_list.append(rsrp)
                     system_rsrqs_list.append(rsrq)
                     system_handovers.append(car_handovers)
                     system_pingpongs.append(car_pingpongs)
                     system_pingpongs_rate.append(car_pingpongs_rate)
+                    system_rlf.append(car_rlf)
+                    system_dho.append(car_dho_time)
 
                     car_counter += 1
 
@@ -114,6 +120,19 @@ def simulation(
                         value=car_pingpongs_rate,
                     )
 
+                    logger.log_ue_metric(
+                        ue_index=car.id,
+                        metric=Logger.Metric.TOTAL_RLF,
+                        step=car_data.timestep,
+                        value=car_rlf,
+                    )
+                    logger.log_ue_metric(
+                        ue_index=car.id,
+                        metric=Logger.Metric.TOTAL_DHO,
+                        step=car_data.timestep,
+                        value=car_dho_time,
+                    )
+
         avg_rsrp = sum(system_rsrps_list) / car_counter if car_counter > 0 else 0.0
         avg_rsrq = sum(system_rsrqs_list) / car_counter if car_counter > 0 else 0.0
         handovers = sum(system_handovers)
@@ -122,6 +141,10 @@ def simulation(
         avg_pingpongs = pingpongs / car_counter if car_counter > 0 else 0.0
         pingpongs_rate = sum(system_pingpongs_rate)
         avg_pingpong_rate = pingpongs_rate / car_counter if car_counter > 0 else 0.0
+        cars_rlf = sum(system_rlf)
+        avg_rlf = cars_rlf / car_counter if car_counter > 0 else 0.0
+        cars_dho = sum(system_dho)
+        avg_dho = cars_dho / car_counter if car_counter > 0 else 0.0
         if not fcd:
             continue
         current_step = list(fcd.values())[0].timestep
@@ -163,6 +186,26 @@ def simulation(
         logger.log_global_metric(
             metric=Logger.Metric.AVERAGE_PINGPONG_RATE,
             value=avg_pingpong_rate,
+            step=current_step,
+        )
+        logger.log_global_metric(
+            metric=Logger.Metric.TOTAL_RLF,
+            value=cars_rlf,
+            step=current_step,
+        )
+        logger.log_global_metric(
+            metric=Logger.Metric.AVERAGE_RLF,
+            value=avg_rlf,
+            step=current_step,
+        )
+        logger.log_global_metric(
+            metric=Logger.Metric.TOTAL_DHO,
+            value=cars_dho,
+            step=current_step,
+        )
+        logger.log_global_metric(
+            metric=Logger.Metric.AVERAGE_DHO,
+            value=avg_dho,
             step=current_step,
         )
 

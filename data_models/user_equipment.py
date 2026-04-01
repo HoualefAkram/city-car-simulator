@@ -20,6 +20,9 @@ class UserEquipment:
 
     min_time_of_stay: float = 2.5
     __model = None
+    # 0.25 roughly maps to -116 dBm, the industry standard cell-edge drop point. TS 38.133 mapping of Q (out): -116 dBm baseline
+    __rlf_threshold = 0.25
+    __handover_time = 0.05  # 50 ms
 
     def __init__(
         self,
@@ -44,6 +47,8 @@ class UserEquipment:
         self.handover_algorithm = handover_algorithm
         self.speed = 0
         self.angle = 0
+        self.rlf_count = 0
+        self.dho_time = 0
 
     @classmethod
     def load_model(
@@ -120,6 +125,15 @@ class UserEquipment:
             1.0,
         )
 
+    def _check_rlf(self, report):
+        if self.serving_bs:
+            current_rsrp = WaveUtils.normalize_rsrp_index(
+                report.rsrp_values.get(self.serving_bs.id, 0), self.serving_bs.radio
+            )
+            # If the normalized signal falls below ~ -116 dBm, log an RLF
+            if current_rsrp < self.__rlf_threshold:
+                self.rlf_count += 1
+
     def __on_movement(
         self,
         timestep: float,
@@ -129,7 +143,7 @@ class UserEquipment:
         self.__append_path_history()
         report = self.generate_report(all_bs=self.all_bs, timestep=timestep)
         self.__append_generated_reports(report)
-
+        self._check_rlf(report)
         self.speed = speed
         self.angle = angle
         # Logs
@@ -402,3 +416,4 @@ class UserEquipment:
         target_bs.add_ue(self)
         self.serving_bs = target_bs
         self.connection_history.append((target_bs.id, timestep))
+        self.dho_time += self.__handover_time

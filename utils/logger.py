@@ -21,6 +21,10 @@ class Logger:
         AVERAGE_RSRQ = "AVERAGE_RSRQ"
         TOTAL_HANDOVERS = "TOTAL_HANDOVERS"
         AVERAGE_HANDOVERS = "AVERAGE_HANDOVERS"
+        TOTAL_RLF = "TOTAL_RLF"  # Radio Link Failure
+        AVERAGE_RLF = "AVERAGE_RLF"  # Radio Link Failure
+        TOTAL_DHO = "TOTAL_DHO"  # Handover delay cost
+        AVERAGE_DHO = "AVERAGE_DHO"  # Average Handover delay cost
         TOTAL_PINGPONG = "TOTAL_PINGPONG"
         AVERAGE_PINGPONG = "AVERAGE_PINGPONG"
         PINGPONG_RATE = "PINGPONG_RATE"
