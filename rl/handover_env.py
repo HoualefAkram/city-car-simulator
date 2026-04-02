@@ -262,19 +262,24 @@ class HandoverEnv(gym.Env):
         }
         self.agent = self.user_equipments[0]
 
-        # Move the agent to its starting position to generate the first report
-        # one of the checks is enough, just for safety
-        if len(self.fcd_data) > 0 and self.agent.id in self.fcd_data[0]:
-            start_data = self.fcd_data[0][self.agent.id]
-            report = self.agent.move_to(
-                start_data.latlng,
-                timestep=start_data.timestep,
-                speed=start_data.speed,
-                angle=start_data.angle,
-            )
-            self.current_top_4 = self._top_4_towers(report)
+        # Move all cars to their starting positions (timestep 0)
+        if len(self.fcd_data) > 0:
+            for fcd in self.fcd_data[0].values():
+                car = self.user_equipments.get(fcd.car_id)
+                if car:
+                    car.move_to(
+                        fcd.latlng,
+                        timestep=fcd.timestep,
+                        speed=fcd.speed,
+                        angle=fcd.angle,
+                    )
+
+        # Step 0 consumed by the initial moves above
+        self.steps = 1
+
+        if self.agent.generated_reports:
+            self.current_top_4 = self._top_4_towers(self.agent.generated_reports[-1])
         else:
-            # Fallback just in case Car 0 doesn't spawn until timestep 2
             self.current_top_4 = self.base_towers[:4]
 
         obs = self._get_obs()
