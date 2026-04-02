@@ -18,7 +18,7 @@ init(autoreset=True)
 
 class UserEquipment:
 
-    min_time_of_stay: float = 2.5
+    min_time_of_stay: float = 1
     __model = None
     # Simplified RSRP proxy for Qout (TS 38.133 §8.1.1 / TS 36.133 §7.6).
     # Real Qout is SINR/BLER-based (10 % BLER of hypothetical PDCCH).
@@ -361,7 +361,7 @@ class UserEquipment:
     def check_handover_3gpp_rsrp(
         self,
         hysteresis: float = 2.0,
-        time_to_trigger: float = 0.320,  # 320 ms
+        time_to_trigger: float = 0.160,  # 160 ms
     ) -> Optional[BaseTower]:
         """Checks if a handover is needed based on 3GPP RSRP criteria."""
         # If serving bs is null, connect to the best available option
