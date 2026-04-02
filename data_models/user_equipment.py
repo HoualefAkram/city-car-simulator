@@ -297,21 +297,26 @@ class UserEquipment:
             return best_bs
         # 1- Top-4 Filtering
         top_4_towers = Filters.top_k_towers(all_bs=self.all_bs, report=report, k=4)
-        top_4_rsrp = []
-        top_4_rsrq = []
-        for bs in top_4_towers:
-            top_4_rsrp.append(
+        top_4_rsrp = [
+            WaveUtils.normalize_rsrp_index(
+                rsrp_index=report.rsrp_values.get(bs.id, 0),
+                radio_type=bs.radio,
+            )
+            for bs in top_4_towers
+        ]
+        # RSRP trends (delta from previous report)
+        if len(self.generated_reports) >= 2:
+            prev_report = self.generated_reports[-2]
+            rsrp_trend = [
                 WaveUtils.normalize_rsrp_index(
-                    rsrp_index=report.rsrp_values.get(bs.id, 0),
-                    radio_type=bs.radio,
+                    report.rsrp_values.get(bs.id, 0), bs.radio
+                ) - WaveUtils.normalize_rsrp_index(
+                    prev_report.rsrp_values.get(bs.id, 0), bs.radio
                 )
-            )
-            top_4_rsrq.append(
-                WaveUtils.normalize_rsrq_index(
-                    rsrq_index=report.rsrq_values.get(bs.id, 0),
-                    radio_type=bs.radio,
-                )
-            )
+                for bs in top_4_towers
+            ]
+        else:
+            rsrp_trend = [0.0, 0.0, 0.0, 0.0]
         # 2- DDQN
         serving_one_hot = [0, 0, 0, 0]
         if self.serving_bs in top_4_towers:
@@ -321,7 +326,7 @@ class UserEquipment:
         norm_speed = min(self.speed / 30.0, 1.0)
         time_since_ho = self.get_normalized_time_since_last_handover(report.timestep)
         state = np.concatenate(
-            [top_4_rsrp, top_4_rsrq, serving_one_hot, [norm_speed], [time_since_ho]],
+            [top_4_rsrp, rsrp_trend, serving_one_hot, [norm_speed], [time_since_ho]],
             dtype=np.float32,
         )
         state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
