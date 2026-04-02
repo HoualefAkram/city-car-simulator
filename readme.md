@@ -29,7 +29,7 @@ This simulator models that process from first principles using real map data, re
 ## Project Structure
 
 ```
-city-car-simulator/
+5g-handover-ddqn/
 │
 ├── prepare.py                  # Data preparation — downloads maps, towers, generates SUMO traffic
 ├── test.py                     # Main simulation — runs handover sim, logs metrics, renders map
