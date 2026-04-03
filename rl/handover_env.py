@@ -123,7 +123,7 @@ class HandoverEnv(gym.Env):
         """Execute the action Handover/No Handover then move all the cars once"""
         # Reset() guarantees current_top_4 is populated
         target_bs = self.current_top_4[action]
-        cooldown_penalty = 0.1
+        cooldown_penalty = 0.2
 
         # Dynamic penalty: higher if switching too soon after the last handover
         current_fcd = self.fcd_data[self.steps]
@@ -205,17 +205,20 @@ class HandoverEnv(gym.Env):
                 delta_rsrp = rsrp_current - rsrp_stayed
                 reward = delta_rsrp - handover_penalty
             else:
-                reward = 0
-                # # Temporal delta: how is the serving tower's signal changing over time?
-                # rsrp_before = WaveUtils.normalize_rsrp_index(
-                #     report_before.rsrp_values.get(tower_before_action.id, 0),
-                #     tower_before_action.radio,
-                # )
-                # rsrp_after = WaveUtils.normalize_rsrp_index(
-                #     report_after.rsrp_values.get(tower_before_action.id, 0),
-                #     tower_before_action.radio,
-                # )
-                # reward = rsrp_after - rsrp_before
+                # Counterfactual: how does serving compare to the best alternative right now?
+                serving_rsrp = WaveUtils.normalize_rsrp_index(
+                    report_after.rsrp_values.get(tower_before_action.id, 0),
+                    tower_before_action.radio,
+                )
+                best_alt_rsrp = max(
+                    WaveUtils.normalize_rsrp_index(
+                        report_after.rsrp_values.get(bs.id, 0), bs.radio
+                    )
+                    for bs in self.current_top_4
+                    if bs != tower_before_action
+                )
+                # Positive if serving is stronger, negative if a better option exists
+                reward = serving_rsrp - best_alt_rsrp
 
         else:
             reward = 0.0
