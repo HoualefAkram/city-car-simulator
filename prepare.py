@@ -10,8 +10,8 @@ from utils.tower_downloader import TowerDownloader
 # MAP_TOP_LEFT = LatLng(48.867010, 2.335946)  # FR, Paris (Train)
 # MAP_BOTTOM_RIGHT = LatLng(48.847375, 2.352779)  # FR, Paris (Train)
 
-MAP_TOP_LEFT = LatLng(51.513377, -0.158129)  # UK, London (Test)
-MAP_BOTTOM_RIGHT = LatLng(51.493742, -0.141296)  # UK, London (Test)
+MAP_TOP_LEFT = LatLng(51.519480, -0.169511)  # UK, London (Test)
+MAP_BOTTOM_RIGHT = LatLng(51.479214, -0.105529)  # UK, London (Test)
 
 MCC = 234  # UK
 OSM_DOWNLOAD_PATH = "cache/maps/map.osm"  # cache folder
