@@ -150,7 +150,7 @@ class HandoverEnv(gym.Env):
                     "timestep": self.steps,
                     "total_timesteps": total_timesteps,
                     "info": "Agent vehicle reached destination.",
-                },
+                }, 
             )
 
         timestep = current_fcd_dict[self.agent.id].timestep

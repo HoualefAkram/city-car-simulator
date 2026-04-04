@@ -274,7 +274,7 @@ if __name__ == "__main__":
     # A3 RSRP
     # ===========================
     if TEST_A3_RSRP:
-        a3_rsrp_logger = Logger(logdir=LOGDIR, name="A3_RSRP")
+        a3_rsrp_logger = Logger(logdir=LOGDIR, name="1_A3_RSRP_LONDON")
         # Initialize User Equipment (Cars)
         num_ue = FcdParser.count_vehicles()
         a3_rsrp_cars: dict[int, UserEquipment] = {
@@ -312,7 +312,7 @@ if __name__ == "__main__":
             bs.connected_ues.clear()
         WaveUtils.reset_fading_state()
 
-        ddqn_logger = Logger(logdir=LOGDIR, name="DDQN_CHO")
+        ddqn_logger = Logger(logdir=LOGDIR, name="1_DDQN_LONDON")
         UserEquipment.load_model(
             map_location="cuda" if torch.cuda.is_available() else "cpu"
         )
