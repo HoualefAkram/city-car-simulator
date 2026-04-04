@@ -52,6 +52,7 @@ def simulation(
     """Run simulation for a single car (UE 0 only)."""
     total_steps = len(fcd_data)
     start_time = time.time()
+    rsrp_per_step = {}
 
     for i in range(total_steps):
         fcd = fcd_data[i]
@@ -80,6 +81,7 @@ def simulation(
 
         if car.serving_bs:
             rsrp = report.rsrp_values.get(car.serving_bs.id, 0)
+            rsrp_per_step[i] = rsrp
             car_handovers = car.get_total_handovers()
             car_pingpongs = car.get_total_pingpong()
             car_pingpongs_rate = car.get_pingpong_rate()
@@ -145,6 +147,7 @@ def simulation(
         "pingpong_rate": pingpong_rate,
         "rlf": car.rlf_count,
         "dho": car.dho_time,
+        "rsrp_per_step": rsrp_per_step,
     }
 
 
@@ -320,6 +323,29 @@ if __name__ == "__main__":
             ddqn_perf_logger.log_global_metric(Logger.Metric.AVERAGE_RLF, total_rlf / completed_seeds, step)
             ddqn_perf_logger.log_global_metric(Logger.Metric.TOTAL_DHO, total_dho, step)
             ddqn_perf_logger.log_global_metric(Logger.Metric.AVERAGE_DHO, total_dho / completed_seeds, step)
+
+    # Log average RSRP per step across all seeds
+    from collections import defaultdict
+
+    if TEST_A3_RSRP:
+        a3_rsrp_by_step = defaultdict(list)
+        for s in all_results:
+            if "A3_RSRP" in all_results[s]:
+                for step, rsrp in all_results[s]["A3_RSRP"]["rsrp_per_step"].items():
+                    a3_rsrp_by_step[step].append(rsrp)
+        for step in sorted(a3_rsrp_by_step):
+            avg_rsrp = sum(a3_rsrp_by_step[step]) / len(a3_rsrp_by_step[step])
+            a3_perf_logger.log_global_metric(Logger.Metric.AVERAGE_RSRP, avg_rsrp, step)
+
+    if TEST_DDQN:
+        ddqn_rsrp_by_step = defaultdict(list)
+        for s in all_results:
+            if "DDQN" in all_results[s]:
+                for step, rsrp in all_results[s]["DDQN"]["rsrp_per_step"].items():
+                    ddqn_rsrp_by_step[step].append(rsrp)
+        for step in sorted(ddqn_rsrp_by_step):
+            avg_rsrp = sum(ddqn_rsrp_by_step[step]) / len(ddqn_rsrp_by_step[step])
+            ddqn_perf_logger.log_global_metric(Logger.Metric.AVERAGE_RSRP, avg_rsrp, step)
 
     # Close performance loggers
     if TEST_A3_RSRP:
