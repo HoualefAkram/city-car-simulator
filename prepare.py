@@ -7,13 +7,17 @@ from utils.path_gen import PathGeneration
 from utils.tower_downloader import TowerDownloader
 
 # --- Params ---
-MAP_TOP_LEFT = LatLng(48.867010, 2.335946)  # FR
-MAP_BOTTOM_RIGHT = LatLng(48.847375, 2.352779)  # UK
-MCC = 208   # UK
+# MAP_TOP_LEFT = LatLng(48.867010, 2.335946)  # FR, Paris (Train)
+# MAP_BOTTOM_RIGHT = LatLng(48.847375, 2.352779)  # FR, Paris (Train)
+
+MAP_TOP_LEFT = LatLng(51.513377, -0.158129)  # UK, London (Test)
+MAP_BOTTOM_RIGHT = LatLng(51.493742, -0.141296)  # UK, London (Test)
+
+MCC = 208  # UK
 OSM_DOWNLOAD_PATH = "cache/maps/map.osm"  # cache folder
-SIMULATION_TIME = 300  # (5 minutes)
+SIMULATION_TIME = 900  # (15 minutes)
 STEP_LENGTH = 0.1  # 100 ms
-SEED = 42
+SEED = 100
 SPAWN_INTERVAL = 5
 
 
