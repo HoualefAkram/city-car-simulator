@@ -13,7 +13,7 @@ from utils.tower_downloader import TowerDownloader
 MAP_TOP_LEFT = LatLng(51.513377, -0.158129)  # UK, London (Test)
 MAP_BOTTOM_RIGHT = LatLng(51.493742, -0.141296)  # UK, London (Test)
 
-MCC = 208  # UK
+MCC = 234  # UK
 OSM_DOWNLOAD_PATH = "cache/maps/map.osm"  # cache folder
 SIMULATION_TIME = 900  # (15 minutes)
 STEP_LENGTH = 0.1  # 100 ms
