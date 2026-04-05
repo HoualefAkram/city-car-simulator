@@ -423,17 +423,34 @@ class UserEquipment:
             best_bs_id = max(last_report.rsrp_values, key=last_report.rsrp_values.get)
             best_bs = next((bs for bs in self.all_bs if bs.id == best_bs_id), None)
             return best_bs
-        serving_rsrp = last_report.rsrp_values[self.serving_bs.id]
+
+        # Build a lookup for tower radio types
+        bs_by_id = {bs.id: bs for bs in self.all_bs}
+
+        # Normalize serving RSRP to [0, 1] for fair inter-RAT comparison
+        serving_rsrp = WaveUtils.normalize_rsrp_index(
+            last_report.rsrp_values[self.serving_bs.id], self.serving_bs.radio
+        )
 
         best_bs_id = max(
             (bs_id for bs_id in last_report.rsrp_values if bs_id != self.serving_bs.id),
-            key=last_report.rsrp_values.get,
+            key=lambda bs_id: WaveUtils.normalize_rsrp_index(
+                last_report.rsrp_values[bs_id], bs_by_id[bs_id].radio
+            ),
             default=None,
         )
         if best_bs_id is None:
             return None
+
+        best_bs_radio = bs_by_id[best_bs_id].radio
+        # Hysteresis normalized: 2 dB out of the full index range
+        norm_hysteresis = hysteresis / (127 if best_bs_radio == "NR" else 97)
+        best_rsrp = WaveUtils.normalize_rsrp_index(
+            last_report.rsrp_values[best_bs_id], best_bs_radio
+        )
+
         # Consider checking report history for TTT only if the HOM is satisfied
-        if last_report.rsrp_values[best_bs_id] > serving_rsrp + hysteresis:
+        if best_rsrp > serving_rsrp + norm_hysteresis:
             # check older reports if TTT is satisfied
             if len(self.generated_reports) > 1:
                 # check how many reports are needed to satisfy the TTT
@@ -449,15 +466,19 @@ class UserEquipment:
                     ]
                     is_satisfied = True
                     for report in report_history:
-                        serving = report.rsrp_values[self.serving_bs.id]
-                        candidate = report.rsrp_values[best_bs_id]
-                        if candidate <= serving + hysteresis:
+                        serving = WaveUtils.normalize_rsrp_index(
+                            report.rsrp_values[self.serving_bs.id],
+                            self.serving_bs.radio,
+                        )
+                        candidate = WaveUtils.normalize_rsrp_index(
+                            report.rsrp_values[best_bs_id],
+                            best_bs_radio,
+                        )
+                        if candidate <= serving + norm_hysteresis:
                             is_satisfied = False
                             break
                     if is_satisfied:
-                        return next(
-                            (bs for bs in self.all_bs if bs.id == best_bs_id), None
-                        )
+                        return bs_by_id.get(best_bs_id)
         return None
 
     def connect_to_tower(self, bs: BaseTower, timestep: float):
