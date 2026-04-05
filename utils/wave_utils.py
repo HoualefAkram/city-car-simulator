@@ -205,6 +205,13 @@ class WaveUtils:
             return max(0, min(127, math.floor((rsrq_db + 43.5) / 0.5)))
 
     @staticmethod
+    def rsrp_index_to_dbm(rsrp_index: int, radio_type) -> float:
+        """Converts a 3GPP RSRP index back to dBm."""
+        if radio_type == "NR":
+            return rsrp_index - 157
+        return rsrp_index - 141
+
+    @staticmethod
     def normalize_rsrp_index(rsrp_index: int, radio_type):
         return rsrp_index / 127 if radio_type == "NR" else rsrp_index / 97
 

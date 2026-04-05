@@ -411,10 +411,11 @@ class UserEquipment:
 
     def check_handover_3gpp_rsrp(
         self,
-        hysteresis: float = 2.0,
-        time_to_trigger: float = 0.160,  # 160 ms
+        hysteresis: float = 3.0,
+        time_to_trigger: float = 0.320,  # 320 ms
     ) -> Optional[BaseTower]:
-        """Checks if a handover is needed based on 3GPP RSRP criteria."""
+        """Checks if a handover is needed based on 3GPP RSRP criteria.
+        Comparison is done in dBm for fair inter-RAT evaluation."""
         # If serving bs is null, connect to the best available option
         last_report: NGRANReport = self.generated_reports[-1]
         if self.serving_bs is None:
@@ -424,17 +425,16 @@ class UserEquipment:
             best_bs = next((bs for bs in self.all_bs if bs.id == best_bs_id), None)
             return best_bs
 
-        # Build a lookup for tower radio types
         bs_by_id = {bs.id: bs for bs in self.all_bs}
 
-        # Normalize serving RSRP to [0, 1] for fair inter-RAT comparison
-        serving_rsrp = WaveUtils.normalize_rsrp_index(
+        # Compare in dBm so hysteresis (dB) applies fairly across LTE/NR
+        serving_rsrp_dbm = WaveUtils.rsrp_index_to_dbm(
             last_report.rsrp_values[self.serving_bs.id], self.serving_bs.radio
         )
 
         best_bs_id = max(
             (bs_id for bs_id in last_report.rsrp_values if bs_id != self.serving_bs.id),
-            key=lambda bs_id: WaveUtils.normalize_rsrp_index(
+            key=lambda bs_id: WaveUtils.rsrp_index_to_dbm(
                 last_report.rsrp_values[bs_id], bs_by_id[bs_id].radio
             ),
             default=None,
@@ -443,38 +443,36 @@ class UserEquipment:
             return None
 
         best_bs_radio = bs_by_id[best_bs_id].radio
-        # Hysteresis normalized: 2 dB out of the full index range
-        norm_hysteresis = hysteresis / (127 if best_bs_radio == "NR" else 97)
-        best_rsrp = WaveUtils.normalize_rsrp_index(
+        best_rsrp_dbm = WaveUtils.rsrp_index_to_dbm(
             last_report.rsrp_values[best_bs_id], best_bs_radio
         )
 
-        # Consider checking report history for TTT only if the HOM is satisfied
-        if best_rsrp > serving_rsrp + norm_hysteresis:
-            # check older reports if TTT is satisfied
+        # A3 entering condition: Mn > Ms + Hys (in dBm)
+        if best_rsrp_dbm > serving_rsrp_dbm + hysteresis:
+            # Check TTT: condition must hold for at least time_to_trigger seconds
             if len(self.generated_reports) > 1:
-                # check how many reports are needed to satisfy the TTT
                 delta_timestep = (
                     last_report.timestep - self.generated_reports[-2].timestep
                 )
                 if delta_timestep <= 0:  # Safety
                     return None
-                needed_reports = ceil(time_to_trigger / delta_timestep)
+                # +1 because N reports span (N-1) intervals
+                needed_reports = ceil(time_to_trigger / delta_timestep) + 1
                 if len(self.generated_reports) >= needed_reports:
                     report_history = self.generated_reports[
                         -1 : -1 - needed_reports : -1
                     ]
                     is_satisfied = True
                     for report in report_history:
-                        serving = WaveUtils.normalize_rsrp_index(
+                        serving = WaveUtils.rsrp_index_to_dbm(
                             report.rsrp_values[self.serving_bs.id],
                             self.serving_bs.radio,
                         )
-                        candidate = WaveUtils.normalize_rsrp_index(
+                        candidate = WaveUtils.rsrp_index_to_dbm(
                             report.rsrp_values[best_bs_id],
                             best_bs_radio,
                         )
-                        if candidate <= serving + norm_hysteresis:
+                        if candidate <= serving + hysteresis:
                             is_satisfied = False
                             break
                     if is_satisfied:
