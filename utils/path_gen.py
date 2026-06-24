@@ -64,6 +64,7 @@ class PathGeneration:
             self.osm_file,
             "--output-file",
             self.network,
+            "--junctions.join",
         ]
         randomTrips_cmd = [
             sys.executable,
