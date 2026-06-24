@@ -41,7 +41,8 @@ class MapDownloader:
         Path(output_file).parent.mkdir(parents=True, exist_ok=True)
         url = f"https://overpass-api.de/api/map?bbox={min_lon},{min_lat},{max_lon},{max_lat}"
         print(Fore.CYAN + f"Downloading OSM data from Overpass API to {output_file}...")
-        response = requests.get(url, stream=True)
+        headers = {"User-Agent": "5g-handover-ddqn/1.0 (OSM map downloader)"}
+        response = requests.get(url, headers=headers, stream=True)
         if response.status_code == 200:
             with open(output_file, "wb") as file:
                 for chunk in response.iter_content(chunk_size=8192):
