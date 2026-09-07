@@ -1,6 +1,6 @@
 
 
-# 5G Handover DDQN — Learned Handover Optimization vs 3GPP A3 Baseline
+# 6G Handover DDQN — Learned Handover Optimization vs 3GPP A3 Baseline
 
 <img width="1517" height="613" alt="framework10" src="https://github.com/user-attachments/assets/b2f93d35-5f9e-42c0-8ad0-f54157ee27a9" />
 
@@ -36,7 +36,7 @@ This simulator models that process from first principles using real map data, re
 ## Project Structure
 
 ```
-5g-handover-ddqn/
+6g-handover-ddqn/
 │
 ├── prepare.py                  # Data preparation — downloads maps, towers, generates SUMO traffic
 ├── test.py                     # Main simulation — runs A3 vs DDQN_CHO, logs metrics, renders map
